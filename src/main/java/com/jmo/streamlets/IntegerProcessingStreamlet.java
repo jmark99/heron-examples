@@ -11,14 +11,15 @@ public class IntegerProcessingStreamlet {
 
   private static final Logger LOG = Logger.getLogger(IntegerProcessingStreamlet.class.getName());
 
-  // Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+//  // Heron resources to be applied to the topology
+//  private static final double CPU = 1.5;
+//  private static final int GIGABYTES_OF_RAM = 8;
+//  private static final int NUM_CONTAINERS = 2;
 
   private static String topologyName;
 
-  public void IntegerProcessingStreamlet() {
+  public IntegerProcessingStreamlet() {
+    LOG.info(">>> Running IntegerProcessingStreamlet...");
   }
 
 
@@ -44,28 +45,15 @@ public class IntegerProcessingStreamlet {
         .setName("remove-twenties")
         .log();
 
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE)
-        .build();
-
-
+    Config config = StreamletUtils.getAtLeastOnceConfig();
     new Runner().run(topologyName, config, builder);
   }
 
 
 
-  public static void main( String[] args ) {
+  public static void main( String[] args ) throws Exception {
     IntegerProcessingStreamlet intProcessor = new IntegerProcessingStreamlet();
-    if (args.length == 0) {
-      System.err.print("Must provide topology name");
-      System.exit(1);
-    } else {
-      LOG.info(">>> Using local cluster");
-      topologyName = args[0];
-    }
+    topologyName = StreamletUtils.getTopologyName(args);
     intProcessor.runStreamlet();
   }
 }

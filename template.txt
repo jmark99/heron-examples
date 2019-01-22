@@ -1,0 +1,48 @@
+
+//import org.apache.heron.streamlet.Builder;
+//import org.apache.heron.streamlet.Config;
+//import org.apache.heron.streamlet.Context;
+//import org.apache.heron.streamlet.Runner;
+//import org.apache.heron.streamlet.Sink;
+//import org.apache.heron.streamlet.Source;
+
+// public class CLASSNAME {
+
+//  private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
+
+//  private static String topologyName;
+
+//  public CLASSNAME() {
+//    LOG.info(">>> CLASSNAME constructor");
+//  }
+
+//  public void runStreamlet() {
+//    LOG.info(">>> run CLASSNAME...");
+
+//    Builder builder = Builder.newBuilder();
+
+//    Source<Integer> integerSource = new IntegerSource();
+
+//        builder.newSource(() -> {
+//             StreamletUtils.sleep(50);
+//             return ThreadLocalRandom.current()
+//                 .nextInt(1, 11); })
+//               .setName("random-ints")
+//               .map(i -> i * 10)
+//               .setName("multi-ten")
+//               .union(zeroes)
+//               .setName("unify-streams")
+//               .filter(i -> i != 20)
+//               .setName("remove-twenties")
+//               .log();
+
+//    Config config = StreamletUtils.getAtLeastOnceConfig();
+//    new Runner().run(topologyName, config, builder);
+//  }
+
+//  public static void main(String[] args) throws Exception {
+//    CLASSNAME streamletInstance = new CLASSNAME();
+//    topologyName = StreamletUtils.getTopologyName(args);
+//    streamletInstance.runStreamlet();
+//  }
+// }

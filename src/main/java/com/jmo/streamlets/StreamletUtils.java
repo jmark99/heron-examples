@@ -1,11 +1,15 @@
 package com.jmo.streamlets;
 
+import org.apache.heron.streamlet.Config;
+
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class StreamletUtils {
 
+  private static final Logger LOG = Logger.getLogger(StreamletUtils.class.getName());
 
   private static Random rand = new Random();
 
@@ -56,6 +60,8 @@ public class StreamletUtils {
     return ls.get(getNextInt(mod));
   }
 
+
+
   /**
    * Fetches the topology's parallelism from the second-command-line
    * argument or defers to a supplied default.
@@ -71,14 +77,19 @@ public class StreamletUtils {
     return String.join(", ", ls.stream().map(i -> i.toString()).collect(Collectors.toList()));
   }
 
-//  public static void runInSimulatorMode(BuilderImpl builder, Config config) {
-//    // Shorten the MessageTimeoutSecs value for simulator to test ack/fail capability
-//    Simulator simulator = new Simulator();
-//    simulator.submitTopology("test", config.getHeronConfig(), builder.build().createTopology());
-//    simulator.activate("test");
-//    StreamletUtils.sleep((5*60 + 30) * 1000);
-//    simulator.deactivate("test");
-//    simulator.killTopology("test");
-//  }
+
+  // Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
+  static Config getAtLeastOnceConfig() {
+    return Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE)
+        .build();
+  }
 
 }
