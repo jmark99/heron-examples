@@ -1,10 +1,12 @@
 package com.jmo.streamlets;
 
+import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
+import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -92,7 +94,10 @@ public class FilesystemSinkStreamlet {
         .toSink(new FilesystemSink<>(file));
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
-    new Runner().run(topologyName, config, builder);
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
   }
 
   public static void main(String[] args) throws Exception {

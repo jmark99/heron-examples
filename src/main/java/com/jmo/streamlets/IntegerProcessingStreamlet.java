@@ -2,19 +2,17 @@ package com.jmo.streamlets;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
+
+import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
+import org.apache.heron.streamlet.impl.BuilderImpl;
 
 public class IntegerProcessingStreamlet {
 
   private static final Logger LOG = Logger.getLogger(IntegerProcessingStreamlet.class.getName());
-
-//  // Heron resources to be applied to the topology
-//  private static final double CPU = 1.5;
-//  private static final int GIGABYTES_OF_RAM = 8;
-//  private static final int NUM_CONTAINERS = 2;
 
   private static String topologyName;
 
@@ -46,7 +44,11 @@ public class IntegerProcessingStreamlet {
         .log();
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
-    new Runner().run(topologyName, config, builder);
+
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
   }
 
 

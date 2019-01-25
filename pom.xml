@@ -29,6 +29,12 @@
       <version>0.20.0</version>
     </dependency>
 
+    <dependency>
+      <groupId>local.heron</groupId>
+      <artifactId>heron-simulator</artifactId>
+      <version>0.20.0</version>
+    </dependency>
+
     <!--<dependency>-->
       <!--<groupId>org.apache.logging.log4j</groupId>-->
       <!--<artifactId>log4j-api</artifactId>-->

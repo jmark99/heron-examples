@@ -1,11 +1,13 @@
 package com.jmo.streamlets;
 
+import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Source;
+import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,9 +15,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
 
-public class ComplexSourceTopology {
+public class ComplexSourceStreamlet {
 
-  private static final Logger LOG = Logger.getLogger(ComplexSourceTopology.class.getName());
+  private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
 
   private static String topologyName;
 
@@ -85,12 +87,12 @@ public class ComplexSourceTopology {
   }
 
 
-  public ComplexSourceTopology() {
-    LOG.info(">>> ComplexSourceTopology constructor");
+  public ComplexSourceStreamlet() {
+    LOG.info(">>> ComplexSourceStreamlet constructor");
   }
 
   public void runStreamlet() {
-    LOG.info(">>> run ComplexSourceTopology...");
+    LOG.info(">>> run ComplexSourceStreamlet...");
 
     Builder builder = Builder.newBuilder();
 
@@ -102,11 +104,14 @@ public class ComplexSourceTopology {
         .toSink(new ComplexIntegerSink<>());
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
-    new Runner().run(topologyName, config, builder);
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
   }
 
   public static void main(String[] args) throws Exception {
-    ComplexSourceTopology complexTopology = new ComplexSourceTopology();
+    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
     topologyName = StreamletUtils.getTopologyName(args);
     complexTopology.runStreamlet();
   }

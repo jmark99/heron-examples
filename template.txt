@@ -1,10 +1,10 @@
-
+//import com.jmo.streamlets.utils.StreamletUtils;
 //import org.apache.heron.streamlet.Builder;
 //import org.apache.heron.streamlet.Config;
-//import org.apache.heron.streamlet.Context;
 //import org.apache.heron.streamlet.Runner;
-//import org.apache.heron.streamlet.Sink;
-//import org.apache.heron.streamlet.Source;
+//import org.apache.heron.streamlet.impl.BuilderImpl;
+
+//import java.util.logging.Logger;
 
 // public class CLASSNAME {
 
@@ -21,24 +21,16 @@
 
 //    Builder builder = Builder.newBuilder();
 
-//    Source<Integer> integerSource = new IntegerSource();
-
-//        builder.newSource(() -> {
-//             StreamletUtils.sleep(50);
-//             return ThreadLocalRandom.current()
-//                 .nextInt(1, 11); })
-//               .setName("random-ints")
-//               .map(i -> i * 10)
-//               .setName("multi-ten")
-//               .union(zeroes)
-//               .setName("unify-streams")
-//               .filter(i -> i != 20)
-//               .setName("remove-twenties")
-//               .log();
+//      //Add processingGraph here
 
 //    Config config = StreamletUtils.getAtLeastOnceConfig();
-//    new Runner().run(topologyName, config, builder);
+//    if (topologyName == null)
+//      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+//    else
+//      new Runner().run(topologyName, config, builder);
 //  }
+
+
 
 //  public static void main(String[] args) throws Exception {
 //    CLASSNAME streamletInstance = new CLASSNAME();
