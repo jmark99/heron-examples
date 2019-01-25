@@ -59,3 +59,8 @@ public class IntegerProcessingStreamlet {
 }
 
 
+//    builder.newSource(() -> {
+//        StreamletUtils.sleep(50);
+//        return ThreadLocalRandom.current().nextInt(1, 11); })
+//        .setName("random-ints")
+//        .log()

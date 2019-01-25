@@ -30,7 +30,7 @@ public class TransformsStreamlet {
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 300);
     else
       new Runner().run(topologyName, config, builder);
   }
@@ -76,7 +76,7 @@ public class TransformsStreamlet {
     }
 
     public void setup(Context context) {
-      context.registerMetric("InCrementMetric", 30, () -> total);
+      context.registerMetric("InCrementMetric", 300, () -> total);
     }
 
     /**
@@ -101,12 +101,19 @@ public class TransformsStreamlet {
      * is applied. At the end of the graph, the original value is ultimately
      * unchanged.
      */
-    builder.newSource(() -> ThreadLocalRandom.current().nextInt(100))
+    builder.newSource(() -> {
+      StreamletUtils.sleep(1);
+      return ThreadLocalRandom.current().nextInt(100); })
         .transform(new DoNothingTransformer<>())
-        .transform(new IncrementTransformer(10))
-        .transform(new IncrementTransformer(-7))
-        .transform(new DoNothingTransformer<>())
-        .transform(new IncrementTransformer(-3))
+        .setName("doNothing1")
         .log();
+
+//    builder.newSource(() -> ThreadLocalRandom.current().nextInt(100))
+//        .transform(new DoNothingTransformer<>())
+////        .transform(new IncrementTransformer(10))
+////        .transform(new IncrementTransformer(-7))
+////        .transform(new DoNothingTransformer<>())
+////        .transform(new IncrementTransformer(-3))
+//        .log();
   }
 }

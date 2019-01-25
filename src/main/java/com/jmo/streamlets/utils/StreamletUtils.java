@@ -89,14 +89,27 @@ public class StreamletUtils {
         .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE).build();
   }
 
-  public static void runInSimulatorMode(BuilderImpl builder, Config config) {
+  public static Config getAtLeastOnceConfig(int msgTimeout) {
+    return Config.newBuilder().setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM).setPerContainerCpu(CPU)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE).build();
+  }
+
+
+  public static void runInSimulatorMode(BuilderImpl builder, Config config,
+      int timeToRunInSeconds) {
     // TODO Shorten the MessageTimeoutSecs value for simulator to test ack/fail capability
     Simulator simulator = new Simulator();
     simulator.submitTopology("test", config.getHeronConfig(), builder.build().createTopology());
     simulator.activate("test");
-    StreamletUtils.sleep((5 * 60 + 30) * 1000);
+    StreamletUtils.sleep(timeToRunInSeconds * 1000);
     simulator.deactivate("test");
     simulator.killTopology("test");
+  }
+
+  public static void runInSimulatorMode(BuilderImpl builder, Config config) {
+    runInSimulatorMode(builder, config, 300); // defaults to 5 minutes
   }
 
 }
