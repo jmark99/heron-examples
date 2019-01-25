@@ -14,18 +14,31 @@ public class IntegerProcessingStreamlet {
 
   private static final Logger LOG = Logger.getLogger(IntegerProcessingStreamlet.class.getName());
 
-  private static String topologyName;
-
-  public IntegerProcessingStreamlet() {
-    LOG.info(">>> Running IntegerProcessingStreamlet...");
+  public static void main( String[] args ) throws Exception {
+    IntegerProcessingStreamlet intProcessor = new IntegerProcessingStreamlet();
+    intProcessor.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-
-  public void runStreamlet() {
+  public void runStreamlet(String topologyName) {
     LOG.info(">>> IntegerProcessingStreamlet...");
 
     Builder builder = Builder.newBuilder();
 
+    integerProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
+
+  private void integerProcessingGraph(Builder builder) {
     Streamlet<Integer> zeroes = builder.newSource(() -> {
       StreamletUtils.sleep(1000);
       return 0;});
@@ -42,21 +55,6 @@ public class IntegerProcessingStreamlet {
         .filter(i -> i != 20)
         .setName("remove-twenties")
         .log();
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
-  }
-
-
-
-  public static void main( String[] args ) throws Exception {
-    IntegerProcessingStreamlet intProcessor = new IntegerProcessingStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    intProcessor.runStreamlet();
   }
 }
 

@@ -20,40 +20,17 @@ public class SmartwatchStreamlet {
 
   private static final Logger LOG = Logger.getLogger(SmartwatchStreamlet.class.getName());
 
-  private static String topologyName;
-
-//  private static final List<String> JOGGERS = Arrays.asList("bill", "ted");
-//
-//  private static class SmartWatchReading implements Serializable {
-//    private static final long serialVersionUID = -6555650939020508026L;
-//    private final String joggerId;
-//    private final int feetRun;
-//
-//    SmartWatchReading() {
-//      StreamletUtils.sleep(1000);
-//      this.joggerId = StreamletUtils.randomFromList(JOGGERS);
-//      this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
-//    }
-//
-//    String getJoggerId() {
-//      return joggerId;
-//    }
-//
-//    int getFeetRun() {
-//      return feetRun;
-//    }
-//  }
-
-  public SmartwatchStreamlet() {
-    LOG.info(">>> SmartwatchStreamlet constructor");
+  public static void main(String[] args) throws Exception {
+    SmartwatchStreamlet streamletInstance = new SmartwatchStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet() {
+  public void runStreamlet(final String topologyName) {
     LOG.info(">>> run SmartwatchStreamlet...");
 
     Builder builder = Builder.newBuilder();
 
-    smartwatchProcessingGrapgh(builder);
+    smartwatchProcessingGraph(builder);
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
@@ -62,29 +39,32 @@ public class SmartwatchStreamlet {
       new Runner().run(topologyName, config, builder);
   }
 
-  private void smartwatchProcessingGrapgh(Builder builder) {
+  //
+  // Topology specific setup and processing graph creation.
+  //
+  class SmartWatchReading implements Serializable {
+    private static final long serialVersionUID = -8398591517116371456L;
+    private final String joggerId;
+    private final int feetRun;
 
     final List<String> JOGGERS = Arrays.asList("bill", "ted");
 
-    class SmartWatchReading implements Serializable {
-      private static final long serialVersionUID = -6555650939020508026L;
-      private final String joggerId;
-      private final int feetRun;
-
-      SmartWatchReading() {
-        StreamletUtils.sleep(1000);
-        this.joggerId = StreamletUtils.randomFromList(JOGGERS);
-        this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
-      }
-
-      String getJoggerId() {
-        return joggerId;
-      }
-
-      int getFeetRun() {
-        return feetRun;
-      }
+    SmartWatchReading() {
+      StreamletUtils.sleep(1000);
+      this.joggerId = StreamletUtils.randomFromList(JOGGERS);
+      this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
     }
+
+    String getJoggerId() {
+      return joggerId;
+    }
+
+    int getFeetRun() {
+      return feetRun;
+    }
+  }
+
+  private void smartwatchProcessingGraph(Builder builder) {
 
     builder.newSource(SmartWatchReading::new).setName("incoming-watch-readings")
         .reduceByKeyAndWindow(
@@ -119,11 +99,5 @@ public class SmartwatchStreamlet {
 
       LOG.info(logMessage);
     });
-  }
-
-  public static void main(String[] args) throws Exception {
-    SmartwatchStreamlet streamletInstance = new SmartwatchStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
   }
 }

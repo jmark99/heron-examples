@@ -20,8 +20,27 @@ public class StreamletCloneStreamlet {
 
   private static final Logger LOG = Logger.getLogger(StreamletCloneStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    StreamletCloneStreamlet streamletInstance = new StreamletCloneStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
 
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run StreamletCloneStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+    streamletCloneProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * A list of players of the game ("player1" through "player100").
@@ -83,7 +102,8 @@ public class StreamletCloneStreamlet {
    * A logging sink that simply prints a formatted log message for each incoming score.
    */
   private static class FormattedLogSink implements Sink<GameScore> {
-    private static final long serialVersionUID = 1251089445039059977L;
+    private static final long serialVersionUID = -11392565006864298L;
+
     public void setup(Context context) {
     }
 
@@ -98,16 +118,7 @@ public class StreamletCloneStreamlet {
     }
   }
 
-
-  public StreamletCloneStreamlet() {
-    LOG.info(">>> StreamletCloneStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run StreamletCloneStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void streamletCloneProcessingGraph(Builder builder) {
     /**
      * A supplier streamlet of random GameScore objects is cloned into two
      * separate streamlets.
@@ -127,20 +138,5 @@ public class StreamletCloneStreamlet {
      */
     splitGameScoreStreamlet.get(1)
         .toSink(new FormattedLogSink());
-
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
   }
-
-
-
-  public static void main(String[] args) throws Exception {
-    StreamletCloneStreamlet streamletInstance = new StreamletCloneStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
- }
+}

@@ -19,10 +19,35 @@ public class ComplexSourceStreamlet {
 
   private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
+    complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public ComplexSourceStreamlet() {
+    LOG.info(">>> ComplexSourceStreamlet constructor");
+  }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run ComplexSourceStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+    complexSourceProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   private static class IntegerSource implements Source<Integer> {
 
+    private static final long serialVersionUID = 7270252642157243930L;
     Random rnd = new Random();
     List<Integer> intList;
 
@@ -56,7 +81,8 @@ public class ComplexSourceStreamlet {
 
 
   private static class ComplexIntegerSink<T> implements Sink<T> {
-    private static final long serialVersionUID = -96514621878356324L;
+
+    private static final long serialVersionUID = -2565224820596857979L;
 
     ComplexIntegerSink() {
     }
@@ -86,34 +112,12 @@ public class ComplexSourceStreamlet {
     }
   }
 
-
-  public ComplexSourceStreamlet() {
-    LOG.info(">>> ComplexSourceStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run ComplexSourceStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void complexSourceProcessingGraph(Builder builder) {
     Source<Integer> integerSource = new IntegerSource();
 
     builder.newSource(integerSource)
         .setName("integer-source")
         .map(i -> i*100)
         .toSink(new ComplexIntegerSink<>());
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
   }
-
-  public static void main(String[] args) throws Exception {
-    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    complexTopology.runStreamlet();
-  }
-
 }

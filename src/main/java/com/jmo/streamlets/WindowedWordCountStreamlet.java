@@ -15,21 +15,34 @@ public class WindowedWordCountStreamlet {
 
   private static final Logger LOG = Logger.getLogger(WindowedWordCountStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    WindowedWordCountStreamlet streamletInstance = new WindowedWordCountStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run WindowedWordCountStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+
+    windowedWordCountProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   private static final List<String> SENTENCES = Arrays
       .asList("I have nothing to declare but my genius", "You can even",
           "Compassion is an action word with no boundaries", "To thine own self be true");
 
-  public WindowedWordCountStreamlet() {
-    LOG.info(">>> WindowedWordCountStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run WindowedWordCountStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void windowedWordCountProcessingGraph(Builder builder) {
     builder
         // The origin of the processing graph: an indefinite series of sentences chosen
         // from the list
@@ -51,17 +64,5 @@ public class WindowedWordCountStreamlet {
               .format("(word: %s, count: %d)", kv.getKey().getKey(), kv.getValue());
           LOG.info(logMessage);
         });
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
-  }
-
-  public static void main(String[] args) throws Exception {
-    WindowedWordCountStreamlet streamletInstance = new WindowedWordCountStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
   }
 }

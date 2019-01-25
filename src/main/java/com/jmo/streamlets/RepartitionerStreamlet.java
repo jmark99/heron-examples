@@ -16,7 +16,28 @@ public class RepartitionerStreamlet {
 
   private static final Logger LOG = Logger.getLogger(RepartitionerStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    RepartitionerStreamlet streamletInstance = new RepartitionerStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run RepartitionerStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+
+    repartitionProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * The repartition function that determines to which partition each incoming
@@ -48,16 +69,7 @@ public class RepartitionerStreamlet {
     return partitions;
   }
 
-
-  public RepartitionerStreamlet() {
-    LOG.info(">>> RepartitionerStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run RepartitionerStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void repartitionProcessingGraph(Builder builder) {
     Streamlet<Integer> randomIntegers = builder
         .newSource(() -> {
           // Random integers are emitted every 50 milliseconds
@@ -77,19 +89,5 @@ public class RepartitionerStreamlet {
         .repartition(2)
         .setName("reduce-partitions-for-logging-operation")
         .log();
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
-  }
-
-
-
-  public static void main(String[] args) throws Exception {
-    RepartitionerStreamlet streamletInstance = new RepartitionerStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
   }
  }

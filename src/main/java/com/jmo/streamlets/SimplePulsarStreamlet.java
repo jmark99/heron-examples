@@ -12,19 +12,17 @@ import java.util.logging.Logger;
 
   private static final Logger LOG = Logger.getLogger(SimplePulsarStreamlet.class.getName());
 
-  private static String topologyName;
+   public static void main(String[] args) throws Exception {
+     SimplePulsarStreamlet streamletInstance = new SimplePulsarStreamlet();
+     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+   }
 
-  public SimplePulsarStreamlet() {
-    LOG.info(">>> SimplePulsarStreamlet constructor");
-  }
-
-
-  public void runStreamlet() {
+  public void runStreamlet(String topologyName) {
     LOG.info(">>> run SimplePulsarStreamlet...");
 
     Builder builder = Builder.newBuilder();
 
-      //Add processingGraph here
+    // Add processingGraph here
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
@@ -33,11 +31,8 @@ import java.util.logging.Logger;
       new Runner().run(topologyName, config, builder);
   }
 
+   //
+   // Topology specific setup and processing graph creation.
+   //
 
-
-  public static void main(String[] args) throws Exception {
-    SimplePulsarStreamlet streamletInstance = new SimplePulsarStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
  }

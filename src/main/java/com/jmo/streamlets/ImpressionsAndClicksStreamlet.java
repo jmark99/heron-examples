@@ -1,6 +1,5 @@
 package com.jmo.streamlets;
 
-
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
@@ -22,23 +21,38 @@ public class ImpressionsAndClicksStreamlet {
 
   private static final Logger LOG = Logger.getLogger(ImpressionsAndClicksStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    ImpressionsAndClicksStreamlet streamletInstance = new ImpressionsAndClicksStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run ImpressionsAndClicksStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+    impressionsAndClicksProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * A list of company IDs to be used to generate random clicks and impressions.
    */
-  private static final List<String> ADS = Arrays.asList(
-      "acme",
-      "blockchain-inc",
-      "omnicorp"
-  );
+  private static final List<String> ADS = Arrays.asList("acme", "blockchain-inc", "omnicorp");
 
   /**
    * A list of 25 active users ("user1" through "user25").
    */
   private static final List<String> USERS = IntStream.range(1, 10)
-      .mapToObj(i -> String.format("user%d", i))
-      .collect(Collectors.toList());
+      .mapToObj(i -> String.format("user%d", i)).collect(Collectors.toList());
 
   /**
    * A POJO for incoming ad impressions (generated every 50 milliseconds).
@@ -67,12 +81,8 @@ public class ImpressionsAndClicksStreamlet {
       return userId;
     }
 
-    @Override
-    public String toString() {
-      return String.format("(adId; %s, impressionId: %s)",
-          adId,
-          impressionId
-      );
+    @Override public String toString() {
+      return String.format("(adId; %s, impressionId: %s)", adId, impressionId);
     }
   }
 
@@ -80,7 +90,7 @@ public class ImpressionsAndClicksStreamlet {
    * A POJO for incoming ad clicks (generated every 50 milliseconds).
    */
   private static class AdClick implements Serializable {
-    private static final long serialVersionUID = 7202766159176178988L;
+    private static final long serialVersionUID = 6880091079255892050L;
     private String adId;
     private String userId;
     private String clickId;
@@ -102,35 +112,19 @@ public class ImpressionsAndClicksStreamlet {
       return userId;
     }
 
-    @Override
-    public String toString() {
-      return String.format("(adId; %s, clickId: %s)",
-          adId,
-          clickId
-      );
+    @Override public String toString() {
+      return String.format("(adId; %s, clickId: %s)", adId, clickId);
     }
   }
 
-
-
-  public ImpressionsAndClicksStreamlet() {
-    LOG.info(">>> ImpressionsAndClicksStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run ImpressionsAndClicksStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void impressionsAndClicksProcessingGraph(Builder builder) {
     // A KVStreamlet is produced. Each element is a KeyValue object where the key
     // is the impression ID and the user ID is the value.
-    Streamlet<AdImpression> impressions = builder
-        .newSource(AdImpression::new);
+    Streamlet<AdImpression> impressions = builder.newSource(AdImpression::new);
 
     // A KVStreamlet is produced. Each element is a KeyValue object where the key
     // is the ad ID and the user ID is the value.
-    Streamlet<AdClick> clicks = builder
-        .newSource(AdClick::new);
+    Streamlet<AdClick> clicks = builder.newSource(AdClick::new);
 
     /**
      * Here, the impressions KVStreamlet is joined to the clicks KVStreamlet.
@@ -152,8 +146,7 @@ public class ImpressionsAndClicksStreamlet {
             JoinType.INNER,
             // For each element resulting from the join operation, a value of 1 will be provided
             // if the ad IDs match between the elements (or a value of 0 if they don't).
-            (user1, user2) -> (user1.getAdId().equals(user2.getAdId())) ? 1 : 0
-        )
+            (user1, user2) -> (user1.getAdId().equals(user2.getAdId())) ? 1 : 0)
         // The reduce function counts the number of ad clicks per user.
         .reduceByKeyAndWindow(
             // Key extractor for the reduce operation
@@ -163,27 +156,10 @@ public class ImpressionsAndClicksStreamlet {
             // Window configuration for the reduce operation
             WindowConfig.TumblingCountWindow(50),
             // A running cumulative total is calculated for each key
-            (cumulative, incoming) -> cumulative + incoming
-        )
+            (cumulative, incoming) -> cumulative + incoming)
         // Finally, the consumer operation provides formatted log output
         .consume(kw -> {
-          LOG.info(String.format("(user: %s, clicks: %d)",
-              kw.getKey().getKey(),
-              kw.getValue()));
+          LOG.info(String.format("(user: %s, clicks: %d)", kw.getKey().getKey(), kw.getValue()));
         });
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
   }
-
-
-
-  public static void main(String[] args) throws Exception {
-    ImpressionsAndClicksStreamlet streamletInstance = new ImpressionsAndClicksStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
- }
+}

@@ -17,11 +17,27 @@ public class WireRequestsStreamlet {
 
   private static final Logger LOG = Logger.getLogger(WireRequestsStreamlet.class.getName());
 
-  private static String topologyName;
-
-  public WireRequestsStreamlet() {
-    LOG.info(">>> WireRequestsStreamlet constructor");
+  public static void main(String[] args) throws Exception {
+    WireRequestsStreamlet streamletInstance = new WireRequestsStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run WireRequestsStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+    wireRequestsProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * A list of current customers (some good, some bad).
@@ -109,11 +125,7 @@ public class WireRequestsStreamlet {
     return sufficientBalance;
   }
 
-  public void runStreamlet() {
-    LOG.info(">>> run WireRequestsStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void wireRequestsProcessingGraph(Builder builder) {
     // Requests from the "quiet" bank branch (high throttling).
     Streamlet<WireRequest> quietBranch = builder.newSource(() -> new WireRequest(20))
         .setNumPartitions(1).setName("quiet-branch-requests")
@@ -134,17 +146,6 @@ public class WireRequestsStreamlet {
     quietBranch.union(mediumBranch).setNumPartitions(2).setName("union-1").union(busyBranch)
         .setName("union-2").setNumPartitions(4).filter(WireRequestsStreamlet::fraudDetect)
         .setName("all-branches-fraud-detect").log();
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
   }
 
-  public static void main(String[] args) throws Exception {
-    WireRequestsStreamlet streamletInstance = new WireRequestsStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
 }

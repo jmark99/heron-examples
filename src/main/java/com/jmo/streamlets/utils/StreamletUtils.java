@@ -63,8 +63,6 @@ public class StreamletUtils {
     return ls.get(getNextInt(mod));
   }
 
-
-
   /**
    * Fetches the topology's parallelism from the second-command-line
    * argument or defers to a supplied default.
@@ -80,29 +78,25 @@ public class StreamletUtils {
     return String.join(", ", ls.stream().map(i -> i.toString()).collect(Collectors.toList()));
   }
 
-
-  // Heron resources to be applied to the topology
+  // Default Heron resources to be applied to the topology
   private static final double CPU = 1.5;
   private static final int GIGABYTES_OF_RAM = 8;
   private static final int NUM_CONTAINERS = 2;
 
   public static Config getAtLeastOnceConfig() {
-    return Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE)
-        .build();
+    return Config.newBuilder().setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM).setPerContainerCpu(CPU)
+        .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE).build();
   }
 
-    public static void runInSimulatorMode(BuilderImpl builder, Config config) {
-      // TODO Shorten the MessageTimeoutSecs value for simulator to test ack/fail capability
-      Simulator simulator = new Simulator();
-      simulator.submitTopology("test", config.getHeronConfig(), builder.build().createTopology());
-      simulator.activate("test");
-      StreamletUtils.sleep((5*60 + 30) * 1000);
-      simulator.deactivate("test");
-      simulator.killTopology("test");
-    }
+  public static void runInSimulatorMode(BuilderImpl builder, Config config) {
+    // TODO Shorten the MessageTimeoutSecs value for simulator to test ack/fail capability
+    Simulator simulator = new Simulator();
+    simulator.submitTopology("test", config.getHeronConfig(), builder.build().createTopology());
+    simulator.activate("test");
+    StreamletUtils.sleep((5 * 60 + 30) * 1000);
+    simulator.deactivate("test");
+    simulator.killTopology("test");
+  }
 
 }

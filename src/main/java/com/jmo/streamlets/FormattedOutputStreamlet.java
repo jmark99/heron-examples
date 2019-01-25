@@ -18,7 +18,28 @@ public class FormattedOutputStreamlet {
 
   private static final Logger LOG = Logger.getLogger(FormattedOutputStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    FormattedOutputStreamlet streamletInstance = new FormattedOutputStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> run FormattedOutputStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+
+    formattedOutputProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * A list of devices emitting sensor readings ("device1" through "device100").
@@ -32,7 +53,7 @@ public class FormattedOutputStreamlet {
    * randomized within a range.
    */
   private static class SensorReading implements Serializable {
-    private static final long serialVersionUID = 3418308641606699744L;
+    private static final long serialVersionUID = 5341796532875219165L;
     private String deviceId;
     private double temperature;
     private double humidity;
@@ -60,15 +81,7 @@ public class FormattedOutputStreamlet {
     }
   }
 
-  public FormattedOutputStreamlet() {
-    LOG.info(">>> FormattedOutputStreamlet constructor");
-  }
-
-  public void runStreamlet() {
-    LOG.info(">>> run FormattedOutputStreamlet...");
-
-    Builder builder = Builder.newBuilder();
-
+  private void formattedOutputProcessingGraph(Builder builder) {
     builder
         // The source streamlet is an indefinite series of sensor readings
         // emitted every two seconds
@@ -82,17 +95,5 @@ public class FormattedOutputStreamlet {
             .format(">>> Device reading from device %s: (temp: %f, humidity: %f)",
                 reading.getDeviceId(),
                 reading.getTemperature(), reading.getHumidity())));
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
-  }
-
-  public static void main(String[] args) throws Exception {
-    FormattedOutputStreamlet streamletInstance = new FormattedOutputStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
   }
 }

@@ -21,7 +21,27 @@ public class FilesystemSinkStreamlet {
 
   private static final Logger LOG = Logger.getLogger(FilesystemSinkStreamlet.class.getName());
 
-  private static String topologyName;
+  public static void main(String[] args) throws Exception {
+    FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  public void runStreamlet(String topologyName) throws IOException {
+    LOG.info(">>> run FilesystemSinkStreamlet...");
+
+    Builder builder = Builder.newBuilder();
+    filesystemProcessingGraph(builder);
+
+    Config config = StreamletUtils.getAtLeastOnceConfig();
+    if (topologyName == null)
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+    else
+      new Runner().run(topologyName, config, builder);
+  }
+
+  //
+  // Topology specific setup and processing graph creation.
+  //
 
   /**
    * Implements the Sink interface, which defines what happens when the toSink
@@ -63,6 +83,7 @@ public class FilesystemSinkStreamlet {
         throw new RuntimeException(e);
       }
     }
+
     /**
      * Any cleanup logic for the sink can be applied here.
      */
@@ -70,14 +91,7 @@ public class FilesystemSinkStreamlet {
     }
   }
 
-  public FilesystemSinkStreamlet() {
-    LOG.info(">>> FilesystemSinkStreamlet constructor");
-  }
-
-  public void runStreamlet() throws IOException {
-    LOG.info(">>> run FilesystemSinkStreamlet...");
-
-    Builder builder = Builder.newBuilder();
+  private void filesystemProcessingGraph(Builder builder) throws IOException {
     // Creates a temporary file to write output into.
     File file = File.createTempFile("filesystem-sink-example", ".tmp");
 
@@ -92,17 +106,6 @@ public class FilesystemSinkStreamlet {
         // Here, the FilesystemSink implementation of the Sink
         // interface is passed to the toSink function.
         .toSink(new FilesystemSink<>(file));
-
-    Config config = StreamletUtils.getAtLeastOnceConfig();
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
   }
 
-  public static void main(String[] args) throws Exception {
-    FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
 }
