@@ -29,7 +29,7 @@ public class WindowedWordCountStreamlet {
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 6*60);
     else
       new Runner().run(topologyName, config, builder);
   }
@@ -46,7 +46,10 @@ public class WindowedWordCountStreamlet {
     builder
         // The origin of the processing graph: an indefinite series of sentences chosen
         // from the list
-        .newSource(() -> StreamletUtils.randomFromList(SENTENCES))
+        .newSource(() -> {
+          StreamletUtils.sleep(1);
+          return StreamletUtils.randomFromList(SENTENCES);
+        })
         .setName("random-sentences-source")
         // Each sentence is "flattened" into a Streamlet<String> of individual words
         .flatMap(sentence -> Arrays.asList(sentence.toLowerCase().split("\\s+")))

@@ -28,7 +28,7 @@ public class TransformsStreamlet {
 
     transformsProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = StreamletUtils.getAtLeastOnceConfig(15);
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 300);
     else
@@ -105,15 +105,10 @@ public class TransformsStreamlet {
       StreamletUtils.sleep(1);
       return ThreadLocalRandom.current().nextInt(100); })
         .transform(new DoNothingTransformer<>())
-        .setName("doNothing1")
+        .transform(new IncrementTransformer(10))
+        .transform(new IncrementTransformer(-7))
+        .transform(new DoNothingTransformer<>())
+        .transform(new IncrementTransformer(-3))
         .log();
-
-//    builder.newSource(() -> ThreadLocalRandom.current().nextInt(100))
-//        .transform(new DoNothingTransformer<>())
-////        .transform(new IncrementTransformer(10))
-////        .transform(new IncrementTransformer(-7))
-////        .transform(new DoNothingTransformer<>())
-////        .transform(new IncrementTransformer(-3))
-//        .log();
   }
 }

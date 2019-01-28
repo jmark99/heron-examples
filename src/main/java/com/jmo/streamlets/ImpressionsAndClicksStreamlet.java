@@ -68,8 +68,8 @@ public class ImpressionsAndClicksStreamlet {
       this.adId = StreamletUtils.randomFromList(ADS);
       this.userId = StreamletUtils.randomFromList(USERS);
       this.impressionId = UUID.randomUUID().toString();
-      LOG.info(String.format("Instantiating impression: %s", this));
-      StreamletUtils.sleep(1000);
+      LOG.info(String.format(">>> Instantiating impression: %s", this));
+      StreamletUtils.sleep(5000);
     }
 
     String getAdId() {
@@ -77,7 +77,6 @@ public class ImpressionsAndClicksStreamlet {
     }
 
     String getUserId() {
-      StreamletUtils.sleep(250);
       return userId;
     }
 

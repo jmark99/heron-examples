@@ -4,6 +4,7 @@ import org.apache.heron.simulator.Simulator;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
+import java.io.File;
 import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -99,7 +100,7 @@ public class StreamletUtils {
 
   public static void runInSimulatorMode(BuilderImpl builder, Config config,
       int timeToRunInSeconds) {
-    // TODO Shorten the MessageTimeoutSecs value for simulator to test ack/fail capability
+    LOG.info(">>> Run in simulator mode for " + timeToRunInSeconds);
     Simulator simulator = new Simulator();
     simulator.submitTopology("test", config.getHeronConfig(), builder.build().createTopology());
     simulator.activate("test");
@@ -111,5 +112,4 @@ public class StreamletUtils {
   public static void runInSimulatorMode(BuilderImpl builder, Config config) {
     runInSimulatorMode(builder, config, 300); // defaults to 5 minutes
   }
-
 }

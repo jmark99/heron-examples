@@ -20,6 +20,8 @@ public class SmartwatchStreamlet {
 
   private static final Logger LOG = Logger.getLogger(SmartwatchStreamlet.class.getName());
 
+  private static final List<String> JOGGERS = Arrays.asList("bill", "ted");
+
   public static void main(String[] args) throws Exception {
     SmartwatchStreamlet streamletInstance = new SmartwatchStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
@@ -34,20 +36,20 @@ public class SmartwatchStreamlet {
 
     Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 600);
     else
       new Runner().run(topologyName, config, builder);
   }
 
+
+
   //
   // Topology specific setup and processing graph creation.
   //
-  class SmartWatchReading implements Serializable {
+  static class SmartWatchReading implements Serializable {
     private static final long serialVersionUID = -8398591517116371456L;
-    private final String joggerId;
-    private final int feetRun;
-
-    final List<String> JOGGERS = Arrays.asList("bill", "ted");
+    private String joggerId;
+    private int feetRun;
 
     SmartWatchReading() {
       StreamletUtils.sleep(1000);

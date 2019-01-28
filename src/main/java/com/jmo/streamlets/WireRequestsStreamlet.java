@@ -28,9 +28,9 @@ public class WireRequestsStreamlet {
     Builder builder = Builder.newBuilder();
     wireRequestsProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = StreamletUtils.getAtLeastOnceConfig(30);
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60*6);
     else
       new Runner().run(topologyName, config, builder);
   }
@@ -127,17 +127,17 @@ public class WireRequestsStreamlet {
 
   private void wireRequestsProcessingGraph(Builder builder) {
     // Requests from the "quiet" bank branch (high throttling).
-    Streamlet<WireRequest> quietBranch = builder.newSource(() -> new WireRequest(20))
+    Streamlet<WireRequest> quietBranch = builder.newSource(() -> new WireRequest(2000))
         .setNumPartitions(1).setName("quiet-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount).setName("quiet-branch-check-balance");
 
     // Requests from the "medium" bank branch (medium throttling).
-    Streamlet<WireRequest> mediumBranch = builder.newSource(() -> new WireRequest(10))
+    Streamlet<WireRequest> mediumBranch = builder.newSource(() -> new WireRequest(1000))
         .setNumPartitions(2).setName("medium-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount).setName("medium-branch-check-balance");
 
     // Requests from the "busy" bank branch (low throttling).
-    Streamlet<WireRequest> busyBranch = builder.newSource(() -> new WireRequest(5))
+    Streamlet<WireRequest> busyBranch = builder.newSource(() -> new WireRequest(500))
         .setNumPartitions(4).setName("busy-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount).setName("busy-branch-check-balance");
 
