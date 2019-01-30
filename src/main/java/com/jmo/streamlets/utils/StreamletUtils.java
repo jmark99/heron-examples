@@ -4,9 +4,9 @@ import org.apache.heron.simulator.Simulator;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
-import java.io.File;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -57,7 +57,7 @@ public class StreamletUtils {
    * Selects a random item from a list. Used in many example source streamlets.
    */
   public static <T> T randomFromList(List<T> ls) {
-    return ls.get(new Random().nextInt(ls.size()));
+    return ls.get(ThreadLocalRandom.current().nextInt(ls.size()));
   }
 
   public static <T> T nextFromList(List<T> ls, int mod) {
@@ -96,7 +96,6 @@ public class StreamletUtils {
         .setUserConfig("topology.message.timeout.secs", msgTimeout)
         .setDeliverySemantics(Config.DeliverySemantics.ATLEAST_ONCE).build();
   }
-
 
   public static void runInSimulatorMode(BuilderImpl builder, Config config,
       int timeToRunInSeconds) {

@@ -13,6 +13,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -32,7 +33,7 @@ public class ImpressionsAndClicksStreamlet {
     Builder builder = Builder.newBuilder();
     impressionsAndClicksProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = StreamletUtils.getAtLeastOnceConfig(30);
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -68,7 +69,7 @@ public class ImpressionsAndClicksStreamlet {
       this.adId = StreamletUtils.randomFromList(ADS);
       this.userId = StreamletUtils.randomFromList(USERS);
       this.impressionId = UUID.randomUUID().toString();
-      LOG.info(String.format(">>> Instantiating impression: %s", this));
+      //LOG.info(String.format(">>> Instantiating impression: %s", this));
       StreamletUtils.sleep(5000);
     }
 
@@ -107,7 +108,6 @@ public class ImpressionsAndClicksStreamlet {
     }
 
     String getUserId() {
-      StreamletUtils.sleep(250);
       return userId;
     }
 
@@ -140,7 +140,7 @@ public class ImpressionsAndClicksStreamlet {
             // Key extractor for the clicks streamlet
             click -> click.getUserId(),
             // Window configuration for the join operation
-            WindowConfig.TumblingCountWindow(25),
+            WindowConfig.TumblingCountWindow(5),
             // Join type (inner join means that all elements from both streams will be included)
             JoinType.INNER,
             // For each element resulting from the join operation, a value of 1 will be provided
@@ -148,17 +148,18 @@ public class ImpressionsAndClicksStreamlet {
             (user1, user2) -> (user1.getAdId().equals(user2.getAdId())) ? 1 : 0)
         // The reduce function counts the number of ad clicks per user.
         .reduceByKeyAndWindow(
-            // Key extractor for the reduce operation
-            kv -> String.format("user-%s", kv.getKey().getKey()),
+            // Key extractor for the reduce operabtion
+            kv -> String.format(">>> user-%s", kv.getKey().getKey()),
             // Value extractor for the reduce operation
             kv -> kv.getValue(),
             // Window configuration for the reduce operation
-            WindowConfig.TumblingCountWindow(50),
+            WindowConfig.TumblingCountWindow(10),
             // A running cumulative total is calculated for each key
             (cumulative, incoming) -> cumulative + incoming)
         // Finally, the consumer operation provides formatted log output
         .consume(kw -> {
-          LOG.info(String.format("(user: %s, clicks: %d)", kw.getKey().getKey(), kw.getValue()));
+          LOG.info(String.format(">>> (user: %s, clicks: %d)", kw.getKey().getKey(),
+              kw.getValue()));
         });
   }
 }
