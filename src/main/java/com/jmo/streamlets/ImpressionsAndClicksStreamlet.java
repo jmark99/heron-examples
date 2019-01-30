@@ -52,7 +52,7 @@ public class ImpressionsAndClicksStreamlet {
   /**
    * A list of 25 active users ("user1" through "user25").
    */
-  private static final List<String> USERS = IntStream.range(1, 10)
+  private static final List<String> USERS = IntStream.range(1, 6)
       .mapToObj(i -> String.format("user%d", i)).collect(Collectors.toList());
 
   /**
@@ -70,7 +70,7 @@ public class ImpressionsAndClicksStreamlet {
       this.userId = StreamletUtils.randomFromList(USERS);
       this.impressionId = UUID.randomUUID().toString();
       //LOG.info(String.format(">>> Instantiating impression: %s", this));
-      StreamletUtils.sleep(5000);
+      StreamletUtils.sleep(1000);
     }
 
     String getAdId() {
