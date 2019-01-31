@@ -12,7 +12,7 @@ Clone or download both:
 
 My version of the acks4 branch is required since I'm currently updating the
 Heron source to allow streamlets to use AT_LEAST_ONCE semantics. Note that
-there are a LOT of extra logging at the moment. This will be removed
+there is a LOT of extra logging at the moment. This will be removed
 eventually.
 
 * cd into incubator-heron directory
@@ -24,14 +24,19 @@ eventually.
 * mvn clean assembly:assembly
      Note the POM needs to be cleaned up, but I haven't bothered to do so yet.
 
-At this point you should be able to run the examples code using either the
+At this point you should be able to run the example code using either the
 simulator or via the local cluster.
 
-* hRunExamples <class-name>  
+* hRunExamples <class-name> i.e., hRunExamples SimpleMapStreamlet 
       (will run in simulator)
   or
-* hRunExamples <class-name> <topology-name> 
+* hRunExamples <class-name> <topology-name> , i.e., hRunExamples IntegerProcessingStreamlet integerTopology
       (will run in local cluster. Will have to activate the topology)
+
+If you prefer to run with the full command, it would look like:
+
+heron submit local target/heron-examples-1.0-SNAPSHOT-jar-with-dependencies.jar com.jmo.streamlets.SimpleMapStreamlet <topology-name> --deploy-deactivated
+
 
 
                 
