@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ "$#" -ne 4 ];
+then
+  echo "Usage: localMvnInstall <jar_file> <groupId> <artifactId> <version>"
+  echo "\tlocalMvnInstall ~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0"
+  exit 1
+fi
+
+# localMvnInstall <jar_file> <groupId> <artifactId> <version>
+# localMvnInstall !/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0
+mvn install:install-file -Dfile=$1 -DgroupId=$2 -DartifactId=$3 -Dversion=$4 -Dpackaging=jar

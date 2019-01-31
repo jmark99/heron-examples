@@ -1,0 +1,50 @@
+#!/bin/sh +x
+
+cd $HOME/heron/incubator-heron
+
+echo "Compiling heron...."
+bazel build --config=ubuntu heron/...
+if [ $? -ne 0 ]
+then
+   echo "Failed to build heron/..."
+   exit 1
+fi
+
+echo "Building binpkgs...."
+bazel build --config=ubuntu scripts/packages:binpkgs
+if [ $? -ne 0 ]
+then
+    echo "Faile to build binpkgs"
+    exit 2
+fi
+
+echo "Install heron locally...."
+bazel-bin/scripts/packages/heron-install.sh --user
+if [ $? -ne 0 ]
+then
+    echo "Failed to install heron locally"
+    exit 2
+fi
+
+mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0
+if [ $? -ne 0 ]
+then
+    echo "Failed to install heron-api jar locally"
+    exit 2
+fi
+
+
+mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar local.heron heron-simulator 0.20.0
+if [ $? -ne 0 ]
+then
+    echo "Failed to install heron-simulator locally"
+    exit 2
+fi
+
+mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar local.heron heron-api-unshaded 0.20.0
+if [ $? -ne 0 ]
+then
+    echo "Failed to install heron-api-unshaded jar locally"
+    exit 2
+fi
+
