@@ -16,6 +16,13 @@
 //    LOG.info(">>> CLASSNAME constructor");
 //  }
 
+//  public static void main(String[] args) throws Exception {
+//    CLASSNAME streamletInstance = new CLASSNAME();
+//    topologyName = StreamletUtils.getTopologyName(args);
+//    streamletInstance.runStreamlet();
+//  }
+// }
+
 //  public void runStreamlet() {
 //    LOG.info(">>> run CLASSNAME...");
 
@@ -29,15 +36,6 @@
 //    else
 //      new Runner().run(topologyName, config, builder);
 //  }
-
-
-
-//  public static void main(String[] args) throws Exception {
-//    CLASSNAME streamletInstance = new CLASSNAME();
-//    topologyName = StreamletUtils.getTopologyName(args);
-//    streamletInstance.runStreamlet();
-//  }
-// }
 
   //
   // Topology specific setup and processing graph creation.
