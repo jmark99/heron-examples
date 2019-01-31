@@ -1,0 +1,37 @@
+On my system, the heron source is located in ~/heron/incubator-heron and 
+my example streamlets are located in ~/heron/heron-examples. The
+scripts are based upon those locations and would have to be modified if 
+used by someone else.
+
+Given that caveat, the following steps should allow one to run the streamlet
+examples.
+
+Clone or download both:
+   https://github.com/jmark99/heron-examples (master branch)
+   https://github.com/jmark99/incubator-heron (acks4 branch)
+
+My version of the acks4 branch is required since I'm currently updating the
+Heron source to allow streamlets to use AT_LEAST_ONCE semantics. Note that
+there are a LOT of extra logging at the moment. This will be removed
+eventually.
+
+* cd into incubator-heron directory
+* hUpdateLocalRepo
+      This will rebuild the heron source and install the necessary jar files
+      to your local maven repo using the settings in the script. Update the
+      scripts to change any necessary paths or names.
+* cd into the directory containing the heron-examples.
+* mvn clean assembly:assembly
+     Note the POM needs to be cleaned up, but I haven't bothered to do so yet.
+
+At this point you should be able to run the examples code using either the
+simulator or via the local cluster.
+
+* hRunExamples <class-name>  
+      (will run in simulator)
+  or
+* hRunExamples <class-name> <topology-name> 
+      (will run in local cluster. Will have to activate the topology)
+
+
+                

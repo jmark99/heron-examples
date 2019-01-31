@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ "$#" -lt 1 ];
+then
+  echo "Usage: hRunMyHeronExamples <classname> [topology_name]"
+  echo "       i.e. hRunMyHeronExamples ComplexSourceTopology [complex01]"
+  exit 1
+fi
+
+
+heron submit local target/heron-examples-1.0-SNAPSHOT-jar-with-dependencies.jar com.jmo.streamlets.$1 $2 --deploy-deactivated
