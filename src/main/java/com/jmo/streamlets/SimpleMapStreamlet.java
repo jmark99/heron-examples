@@ -12,26 +12,42 @@ public class SimpleMapStreamlet {
 
   private static final Logger LOG = Logger.getLogger(SimpleMapStreamlet.class.getName());
 
-  private static String topologyName;
+  private static int msgTimeout = 30;
+  private static int delay = 1; // milisecond delay between emitting of tuples.
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
-  public SimpleMapStreamlet() {
-    LOG.info(">>> SimpleMapStreamlet constructor");
-  }
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
 
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     SimpleMapStreamlet streamletInstance = new SimpleMapStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet() {
-    LOG.info(">>> run SimpleMapStreamlet...");
+  public void runStreamlet(String topologyName) {
+    LOG.info(">>> runStreamlet: " + this.getClass().getSimpleName());
 
     Builder builder = Builder.newBuilder();
+    createSimpleMapProcessingGraph(builder);
 
-    simpleMapProcessingGraph(builder);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -42,22 +58,23 @@ public class SimpleMapStreamlet {
   // Topology specific setup and processing graph creation.
   //
 
-  private void simpleMapProcessingGraph(Builder builder) {
+  private void createSimpleMapProcessingGraph(Builder builder) {
 
-    builder.newSource(() -> 1)
-        .setName("ones")
-        .map(i -> i + 12)
-        .setName("add-twelve")
-        .log();
-
-    // To add a delay between the emitting of new values:
-    //builder.newSource(() -> {
-    //  StreamletUtils.sleep(1000);
-    //  return 1;
-    //})
-    //  .setName("ones")
-    //  .map(i -> i + 12)
-    //  .setName("add-twelve")
-    //  .log();
+    if (!addDelay) {
+      builder.newSource(() -> 1)
+          .setName("ones")
+          .map(i -> i + 12)
+          .setName("add-twelve")
+          .log();
+    } else {
+      builder.newSource(() -> {
+        StreamletUtils.sleepnano(delay);
+        return 1;
+      })
+          .setName("ones")
+          .map(i -> i + 12)
+          .setName("add-twelve")
+          .log();
+    }
   }
 }

@@ -21,7 +21,19 @@ public class FilesystemSinkStreamlet {
 
   private static final Logger LOG = Logger.getLogger(FilesystemSinkStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -30,9 +42,17 @@ public class FilesystemSinkStreamlet {
     LOG.info(">>> run FilesystemSinkStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    filesystemProcessingGraph(builder);
+    createFilesystemSinkProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -91,7 +111,7 @@ public class FilesystemSinkStreamlet {
     }
   }
 
-  private void filesystemProcessingGraph(Builder builder) throws IOException {
+  private void createFilesystemSinkProcessingGraph(Builder builder) throws IOException {
     // Creates a temporary file to write output into.
     File file = File.createTempFile("filesystem-sink-example", ".tmp");
 
@@ -107,5 +127,4 @@ public class FilesystemSinkStreamlet {
         // interface is passed to the toSink function.
         .toSink(new FilesystemSink<>(file));
   }
-
 }

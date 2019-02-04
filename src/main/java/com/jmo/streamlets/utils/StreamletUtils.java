@@ -40,14 +40,21 @@ public class StreamletUtils {
     }
   }
 
+  public static void sleepnano(int nanos) {
+    try {
+      Thread.sleep(0, nanos);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Fetches the topology's name from the first command-line argument or
-   * throws an exception if not present.
+   * returns null if not present.
    */
   public static String getTopologyName(String[] args) throws Exception {
     if (args.length == 0) {
       return null;
-      //throw new Exception("You must supply a name for the topology");
     } else {
       return args[0];
     }

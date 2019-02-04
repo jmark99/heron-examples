@@ -19,22 +19,44 @@ public class ComplexSourceStreamlet {
 
   private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
 
-  public static void main(String[] args) throws Exception {
-    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
-    complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
-  }
+  private static int msgTimeout = 30;
+  private static int delay = 1; // milisecond delay between emitting of tuples.
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
 
   public ComplexSourceStreamlet() {
-    LOG.info(">>> ComplexSourceStreamlet constructor");
+  }
+
+  public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
+    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
+    complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
   public void runStreamlet(String topologyName) {
     LOG.info(">>> run ComplexSourceStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    complexSourceProcessingGraph(builder);
+    createComplexSourcePRocessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false).build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -71,14 +93,13 @@ public class ComplexSourceStreamlet {
       intList.add(i + 1);
       intList.add(i + 2);
       intList.add(i + 3);
-      StreamletUtils.sleep(500);
+      StreamletUtils.sleepnano(delay);
       return intList;
     }
 
     public void cleanup() {
     }
   }
-
 
   private static class ComplexIntegerSink<T> implements Sink<T> {
 
@@ -112,12 +133,12 @@ public class ComplexSourceStreamlet {
     }
   }
 
-  private void complexSourceProcessingGraph(Builder builder) {
+  private void createComplexSourcePRocessingGraph(Builder builder) {
     Source<Integer> integerSource = new IntegerSource();
 
     builder.newSource(integerSource)
         .setName("integer-source")
-        .map(i -> i*100)
+        .map(i -> i * 100)
         .toSink(new ComplexIntegerSink<>());
   }
 }
