@@ -68,29 +68,21 @@ public class IntegerProcessingStreamlet {
       StreamletUtils.sleep(1000);
       return 0;});
 
-    if (!addDelay) {
-      builder.newSource(() -> ThreadLocalRandom.current().nextInt(1, 11))
-          .setName("random-ints")
-          .map(i -> i * 10)
-          .setName("multi-ten")
-          .union(zeroes)
-          .setName("unify-streams")
-          .filter(i -> i != 20)
-          .setName("remove-twenties")
-          .log();
-    } else {
-      builder.newSource(() -> {
+    Streamlet<Integer> integers = builder.newSource(() -> {
+      if (addDelay) {
         StreamletUtils.sleep(delay);
-        return ThreadLocalRandom.current()
-            .nextInt(1, 11); })
-          .setName("random-ints")
-          .map(i -> i * 10)
-          .setName("multi-ten")
-          .union(zeroes)
-          .setName("unify-streams")
-          .filter(i -> i != 20)
-          .setName("remove-twenties")
-          .log();
-    }
+      }
+      return ThreadLocalRandom.current()
+          .nextInt(1, 11); });
+
+    integers
+        .setName("random-ints")
+        .map(i -> i * 10)
+        .setName("multi-ten")
+        .union(zeroes)
+        .setName("unify-streams")
+        .filter(i -> i != 20)
+        .setName("remove-twenties")
+        .log();
   }
 }

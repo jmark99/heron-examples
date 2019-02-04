@@ -1,3 +1,5 @@
+package com.jmo.streamlets;
+
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
@@ -5,11 +7,24 @@ import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
-public class CLASSNAME {
+/**
+ * Union operations combine two streamlets of the same type into a single streamlet without
+ * modifying the elements.
+ * <p>
+ * In this example,  one streamlet is an endless series of "ooh"s while the other is an endless
+ * series of "aah"s. The union operation combines them into a single streamlet of alternating
+ * "ooh"s and "aah"s.
+ * <p>
+ * This example is based upon the snippet at
+ * <a https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/>
+ * https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/</a>,
+ */
+public class SimpleUnionStreamlet {
 
-private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
+  private static final Logger LOG = Logger.getLogger(SimpleUnionStreamlet.class.getName());
 
   private static int msgTimeout = 30;
   private static boolean addDelay = true;
@@ -25,27 +40,22 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
   public static void main(String[] args) throws Exception {
 
     LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
     LOG.info(">>> msgTimeout:   " + msgTimeout);
     LOG.info(">>> semantics:    " + semantics);
 
-    CLASSNAME streamletInstance = new CLASSNAME();
+    SimpleUnionStreamlet streamletInstance = new SimpleUnionStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
   public void runStreamlet(String topologyName) {
-    LOG.info(">>> run CLASSNAME...");
-
     Builder builder = Builder.newBuilder();
-    create_CLASSNAME_ProcessingGraph(builder)
+    createUnionProcessingGraph(builder);
 
     Config config = Config.newBuilder()
         .setNumContainers(NUM_CONTAINERS)
         .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
         .setPerContainerCpu(CPU)
         .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
         .build();
 
     if (topologyName == null)
@@ -58,5 +68,24 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
   // Topology specific setup and processing graph creation.
   //
 
-  private void create_CLASSNAME_ProcessingGraph(Builder builder) {
+  private void createUnionProcessingGraph(Builder builder) {
+
+    Streamlet<String> oohs = builder.newSource(() -> {
+      if (addDelay) {
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
+      return "ooh";
+    });
+
+    Streamlet<String> aahs = builder.newSource(() -> {
+      if (addDelay) {
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
+      return "aah";
+    });
+
+    oohs.union(aahs)
+        .log();
   }
+
+}
