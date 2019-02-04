@@ -13,7 +13,9 @@ public class SimpleMapStreamlet {
   private static final Logger LOG = Logger.getLogger(SimpleMapStreamlet.class.getName());
 
   private static int msgTimeout = 30;
-  private static int delay = 1; // milisecond delay between emitting of tuples.
+  private static int delay = 1;
+  private static int msDelay = 0;
+  private static int nsDelay = 1;
   private static boolean addDelay = true;
   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
@@ -68,7 +70,7 @@ public class SimpleMapStreamlet {
           .log();
     } else {
       builder.newSource(() -> {
-        StreamletUtils.sleepnano(delay);
+        StreamletUtils.sleep(msDelay, nsDelay);
         return 1;
       })
           .setName("ones")

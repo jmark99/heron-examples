@@ -16,7 +16,23 @@ public class RepartitionerStreamlet {
 
   private static final Logger LOG = Logger.getLogger(RepartitionerStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static int delay = 50; // milisecond delay between emitting of tuples.
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     RepartitionerStreamlet streamletInstance = new RepartitionerStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -26,9 +42,17 @@ public class RepartitionerStreamlet {
 
     Builder builder = Builder.newBuilder();
 
-    repartitionProcessingGraph(builder);
+    createRepartitionProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -69,11 +93,13 @@ public class RepartitionerStreamlet {
     return partitions;
   }
 
-  private void repartitionProcessingGraph(Builder builder) {
+  private void createRepartitionProcessingGraph(Builder builder) {
     Streamlet<Integer> randomIntegers = builder
         .newSource(() -> {
           // Random integers are emitted every 50 milliseconds
-          StreamletUtils.sleep(50);
+          if (addDelay) {
+            StreamletUtils.sleep(delay);
+          }
           return ThreadLocalRandom.current().nextInt(100);
         })
         .setNumPartitions(2)

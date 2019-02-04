@@ -18,7 +18,18 @@ public class FormattedOutputStreamlet {
 
   private static final Logger LOG = Logger.getLogger(FormattedOutputStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
     FormattedOutputStreamlet streamletInstance = new FormattedOutputStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -27,10 +38,17 @@ public class FormattedOutputStreamlet {
     LOG.info(">>> run FormattedOutputStreamlet...");
 
     Builder builder = Builder.newBuilder();
+    createFormattedOutputProcessingGraph(builder);
 
-    formattedOutputProcessingGraph(builder);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -60,7 +78,7 @@ public class FormattedOutputStreamlet {
 
     SensorReading() {
       // Readings are produced only every two seconds
-      StreamletUtils.sleep(500);
+      StreamletUtils.sleep(2000);
       this.deviceId = StreamletUtils.randomFromList(DEVICES);
       // Each temperature reading is a double between 70 and 100
       this.temperature = 70 + 30 * new Random().nextDouble();
@@ -81,7 +99,7 @@ public class FormattedOutputStreamlet {
     }
   }
 
-  private void formattedOutputProcessingGraph(Builder builder) {
+  private void createFormattedOutputProcessingGraph(Builder builder) {
     builder
         // The source streamlet is an indefinite series of sensor readings
         // emitted every two seconds

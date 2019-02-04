@@ -16,7 +16,7 @@ public class IntegerProcessingStreamlet {
 
   private static String topologyName;
   private static int msgTimeout = 30;
-  private static int delay = 1000; // milisecond delay between emitting of tuples.
+  private static int delay = 1; // milisecond delay between emitting of tuples.
   private static boolean addDelay = true;
   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
@@ -94,10 +94,3 @@ public class IntegerProcessingStreamlet {
     }
   }
 }
-
-
-//    builder.newSource(() -> {
-//        StreamletUtils.sleep(50);
-//        return ThreadLocalRandom.current().nextInt(1, 11); })
-//        .setName("random-ints")
-//        .log()

@@ -6,6 +6,7 @@ import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.SerializableTransformer;
+import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -16,7 +17,25 @@ public class TransformsStreamlet {
 
   private static final Logger LOG = Logger.getLogger(TransformsStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static int delay = 1;
+  private static boolean addDelay = true;
+  private static int msDelay = 0;
+  private static int nsDelay = 1;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     TransformsStreamlet streamletInstance = new TransformsStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -25,10 +44,17 @@ public class TransformsStreamlet {
     LOG.info(">>> run TransformsStreamlet...");
 
     Builder builder = Builder.newBuilder();
+    createTransformsProcessingGraph(builder);
 
-    transformsProcessingGraph(builder);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
 
-    Config config = StreamletUtils.getAtLeastOnceConfig(15);
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 300);
     else
@@ -93,7 +119,7 @@ public class TransformsStreamlet {
     }
   }
 
-  private void transformsProcessingGraph(Builder builder) {
+  private void createTransformsProcessingGraph(Builder builder) {
 
     /**
      * The processing graph consists of a supplier streamlet that emits
@@ -101,9 +127,15 @@ public class TransformsStreamlet {
      * is applied. At the end of the graph, the original value is ultimately
      * unchanged.
      */
-    builder.newSource(() -> {
-      StreamletUtils.sleep(1);
-      return ThreadLocalRandom.current().nextInt(100); })
+    Streamlet<Integer> randomIntStreamlet = builder.newSource(() -> {
+      if (addDelay) {
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
+      return ThreadLocalRandom.current().nextInt(100);
+    });
+
+    randomIntStreamlet
+        .setName("random-int-suppliers")
         .transform(new DoNothingTransformer<>())
         .transform(new IncrementTransformer(10))
         .transform(new IncrementTransformer(-7))

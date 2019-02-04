@@ -17,7 +17,23 @@ public class WireRequestsStreamlet {
 
   private static final Logger LOG = Logger.getLogger(WireRequestsStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static boolean addDelay = true;
+  private static int msDelay = 0;
+  private static int nsDelay = 1;
+
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     WireRequestsStreamlet streamletInstance = new WireRequestsStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -26,9 +42,17 @@ public class WireRequestsStreamlet {
     LOG.info(">>> run WireRequestsStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    wireRequestsProcessingGraph(builder);
+    createWireRequestsProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig(30);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60*6);
     else
@@ -125,27 +149,43 @@ public class WireRequestsStreamlet {
     return sufficientBalance;
   }
 
-  private void wireRequestsProcessingGraph(Builder builder) {
+  private void createWireRequestsProcessingGraph(Builder builder) {
     // Requests from the "quiet" bank branch (high throttling).
-    Streamlet<WireRequest> quietBranch = builder.newSource(() -> new WireRequest(2000))
-        .setNumPartitions(1).setName("quiet-branch-requests")
-        .filter(WireRequestsStreamlet::checkRequestAmount).setName("quiet-branch-check-balance");
+    Streamlet<WireRequest> quietBranch = builder
+        .newSource(() -> new WireRequest(2000))
+        .setNumPartitions(1)
+        .setName("quiet-branch-requests")
+        .filter(WireRequestsStreamlet::checkRequestAmount)
+        .setName("quiet-branch-check-balance");
 
     // Requests from the "medium" bank branch (medium throttling).
-    Streamlet<WireRequest> mediumBranch = builder.newSource(() -> new WireRequest(1000))
-        .setNumPartitions(2).setName("medium-branch-requests")
-        .filter(WireRequestsStreamlet::checkRequestAmount).setName("medium-branch-check-balance");
+    Streamlet<WireRequest> mediumBranch = builder
+        .newSource(() -> new WireRequest(1000))
+        .setNumPartitions(2)
+        .setName("medium-branch-requests")
+        .filter(WireRequestsStreamlet::checkRequestAmount)
+        .setName("medium-branch-check-balance");
 
     // Requests from the "busy" bank branch (low throttling).
-    Streamlet<WireRequest> busyBranch = builder.newSource(() -> new WireRequest(500))
-        .setNumPartitions(4).setName("busy-branch-requests")
-        .filter(WireRequestsStreamlet::checkRequestAmount).setName("busy-branch-check-balance");
+    Streamlet<WireRequest> busyBranch = builder
+        .newSource(() -> new WireRequest(500))
+        .setNumPartitions(4)
+        .setName("busy-branch-requests")
+        .filter(WireRequestsStreamlet::checkRequestAmount)
+        .setName("busy-branch-check-balance");
 
     // Here, the streamlets for the three bank branches are united into one. The fraud
     // detection filter then operates on that unified streamlet.
-    quietBranch.union(mediumBranch).setNumPartitions(2).setName("union-1").union(busyBranch)
-        .setName("union-2").setNumPartitions(4).filter(WireRequestsStreamlet::fraudDetect)
-        .setName("all-branches-fraud-detect").log();
+    quietBranch
+        .union(mediumBranch)
+        .setNumPartitions(2)
+        .setName("union-1")
+        .union(busyBranch)
+        .setName("union-2")
+        .setNumPartitions(4)
+        .filter(WireRequestsStreamlet::fraudDetect)
+        .setName("all-branches-fraud-detect")
+        .log();
   }
 
 }

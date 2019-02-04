@@ -20,9 +20,25 @@ public class SmartwatchStreamlet {
 
   private static final Logger LOG = Logger.getLogger(SmartwatchStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static int delay = 1; // milisecond delay between emitting of tuples.
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   private static final List<String> JOGGERS = Arrays.asList("bill", "ted");
 
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     SmartwatchStreamlet streamletInstance = new SmartwatchStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -31,17 +47,22 @@ public class SmartwatchStreamlet {
     LOG.info(">>> run SmartwatchStreamlet...");
 
     Builder builder = Builder.newBuilder();
+    createSmartwatchProcessingGraph(builder);
 
-    smartwatchProcessingGraph(builder);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 600);
     else
       new Runner().run(topologyName, config, builder);
   }
-
-
 
   //
   // Topology specific setup and processing graph creation.
@@ -52,7 +73,9 @@ public class SmartwatchStreamlet {
     private int feetRun;
 
     SmartWatchReading() {
-      StreamletUtils.sleep(1000);
+      if (addDelay) {
+        StreamletUtils.sleep(delay);
+      }
       this.joggerId = StreamletUtils.randomFromList(JOGGERS);
       this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
     }
@@ -66,7 +89,7 @@ public class SmartwatchStreamlet {
     }
   }
 
-  private void smartwatchProcessingGraph(Builder builder) {
+  private void createSmartwatchProcessingGraph(Builder builder) {
 
     builder.newSource(SmartWatchReading::new).setName("incoming-watch-readings")
         .reduceByKeyAndWindow(

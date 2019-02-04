@@ -21,7 +21,23 @@ public class ImpressionsAndClicksStreamlet {
 
   private static final Logger LOG = Logger.getLogger(ImpressionsAndClicksStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static int delay = 500;
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     ImpressionsAndClicksStreamlet streamletInstance = new ImpressionsAndClicksStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -30,9 +46,17 @@ public class ImpressionsAndClicksStreamlet {
     LOG.info(">>> run ImpressionsAndClicksStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    impressionsAndClicksProcessingGraph(builder);
+    createImpressionsAndClicksProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig(30);
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -68,8 +92,9 @@ public class ImpressionsAndClicksStreamlet {
       this.adId = StreamletUtils.randomFromList(ADS);
       this.userId = StreamletUtils.randomFromList(USERS);
       this.impressionId = UUID.randomUUID().toString();
-      //LOG.info(String.format(">>> Instantiating impression: %s", this));
-      StreamletUtils.sleep(1000);
+      if (addDelay) {
+        StreamletUtils.sleep(delay);
+      }
     }
 
     String getAdId() {
@@ -99,7 +124,9 @@ public class ImpressionsAndClicksStreamlet {
       this.userId = StreamletUtils.randomFromList(USERS);
       this.clickId = UUID.randomUUID().toString();
       LOG.info(String.format("Instantiating click: %s", this));
-      StreamletUtils.sleep(1000);
+      if (addDelay) {
+        StreamletUtils.sleep(delay);
+      }
     }
 
     String getAdId() {
@@ -115,7 +142,7 @@ public class ImpressionsAndClicksStreamlet {
     }
   }
 
-  private void impressionsAndClicksProcessingGraph(Builder builder) {
+  private void createImpressionsAndClicksProcessingGraph(Builder builder) {
     // A KVStreamlet is produced. Each element is a KeyValue object where the key
     // is the impression ID and the user ID is the value.
     Streamlet<AdImpression> impressions = builder.newSource(AdImpression::new);

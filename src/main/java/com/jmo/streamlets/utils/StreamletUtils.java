@@ -48,6 +48,15 @@ public class StreamletUtils {
     }
   }
 
+  public static void sleep(long millis, int nanos) {
+    try {
+      Thread.sleep(millis, nanos);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+
   /**
    * Fetches the topology's name from the first command-line argument or
    * returns null if not present.

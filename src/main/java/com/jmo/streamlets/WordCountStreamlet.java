@@ -20,21 +20,44 @@ https://github.com/streamlio/heron-java-streamlet-api-example
 
   private static final Logger LOG = Logger.getLogger(WordCountStreamlet.class.getName());
 
-  private static String topologyName;
+  private static int msgTimeout = 30;
+  private static boolean addDelay = true;
+  private static int msDelay = 100;
+  private static int nsDelay = 0;
 
-  public WordCountStreamlet() {
-    LOG.info(">>> WordCountStreamlet constructor");
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
+  public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> msDelay:      " + msDelay);
+    LOG.info(">>> nsDelay:      " + nsDelay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
+    WordCountStreamlet streamletInstance = new WordCountStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet() {
+  public void runStreamlet(String topologyName) {
     LOG.info(">>> run WordCountStreamlet...");
 
     Builder builder = Builder.newBuilder();
+    createWordCountProcessingGraph(builder);
 
-    wordCountProcessingGraph(builder);
-
-    //Config config = Config.defaultConfig();
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
 
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
@@ -42,11 +65,7 @@ https://github.com/streamlio/heron-java-streamlet-api-example
       new Runner().run(topologyName, config, builder);
   }
 
-  public static void main(String[] args) throws Exception {
-    WordCountStreamlet streamletInstance = new WordCountStreamlet();
-    topologyName = StreamletUtils.getTopologyName(args);
-    streamletInstance.runStreamlet();
-  }
+
 
   //
   // Topology specific setup and processing graph creation.
@@ -64,16 +83,20 @@ https://github.com/streamlio/heron-java-streamlet-api-example
    );
 
 
-  private void wordCountProcessingGraph(Builder builder) {
+  private void createWordCountProcessingGraph(Builder builder) {
 
     Streamlet<String> randomSentences1 =
         builder.newSource(() -> {
-          StreamletUtils.sleep(10);
+          if (addDelay) {
+            StreamletUtils.sleep(msDelay, nsDelay);
+          }
           return StreamletUtils.randomFromList(SENTENCES_1);
         });
     Streamlet<String> randomSentences2 =
         builder.newSource(() -> {
-          StreamletUtils.sleep(10);
+          if (addDelay) {
+            StreamletUtils.sleep(msDelay, nsDelay);
+          }
           return StreamletUtils.randomFromList(SENTENCES_2);
         });
 

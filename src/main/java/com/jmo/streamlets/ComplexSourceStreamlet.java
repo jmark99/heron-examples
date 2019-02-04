@@ -20,8 +20,9 @@ public class ComplexSourceStreamlet {
   private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
 
   private static int msgTimeout = 30;
-  private static int delay = 1; // milisecond delay between emitting of tuples.
   private static boolean addDelay = true;
+  private static int msDelay = 0;
+  private static int nsDelay = 1;
   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
   // Default Heron resources to be applied to the topology
@@ -34,10 +35,11 @@ public class ComplexSourceStreamlet {
 
   public static void main(String[] args) throws Exception {
 
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
+    LOG.info(">>> addDelay:   " + addDelay);
+    LOG.info(">>> msDelay:    " + msDelay);
+    LOG.info(">>> nsDelay:    " + nsDelay);
+    LOG.info(">>> msgTimeout: " + msgTimeout);
+    LOG.info(">>> semantics:  " + semantics);
 
     ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
     complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
@@ -93,7 +95,7 @@ public class ComplexSourceStreamlet {
       intList.add(i + 1);
       intList.add(i + 2);
       intList.add(i + 3);
-      StreamletUtils.sleepnano(delay);
+      StreamletUtils.sleep(msDelay, nsDelay);
       return intList;
     }
 

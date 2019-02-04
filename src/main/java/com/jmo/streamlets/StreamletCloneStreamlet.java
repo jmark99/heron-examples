@@ -20,7 +20,23 @@ public class StreamletCloneStreamlet {
 
   private static final Logger LOG = Logger.getLogger(StreamletCloneStreamlet.class.getName());
 
+  private static int msgTimeout = 30;
+  private static int delay = 1; // milisecond delay between emitting of tuples.
+  private static boolean addDelay = true;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+  // Default Heron resources to be applied to the topology
+  private static final double CPU = 1.5;
+  private static final int GIGABYTES_OF_RAM = 8;
+  private static final int NUM_CONTAINERS = 2;
+
   public static void main(String[] args) throws Exception {
+
+    LOG.info(">>> addDelay:     " + addDelay);
+    LOG.info(">>> delay:        " + delay);
+    LOG.info(">>> msgTimeout:   " + msgTimeout);
+    LOG.info(">>> semantics:    " + semantics);
+
     StreamletCloneStreamlet streamletInstance = new StreamletCloneStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
@@ -29,9 +45,17 @@ public class StreamletCloneStreamlet {
     LOG.info(">>> run StreamletCloneStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    streamletCloneProcessingGraph(builder);
+    createStreamletCloneProcessingGraph(builder);
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
+        .setUserConfig("topology.droptuples.upon.backpressure", false)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
@@ -58,7 +82,9 @@ public class StreamletCloneStreamlet {
     private int score;
 
     GameScore() {
-      StreamletUtils.sleep(1000);
+      if (addDelay) {
+        StreamletUtils.sleep(delay);
+      }
       this.playerId = StreamletUtils.randomFromList(PLAYERS);
       this.score = ThreadLocalRandom.current().nextInt(1000);
     }
@@ -118,7 +144,7 @@ public class StreamletCloneStreamlet {
     }
   }
 
-  private void streamletCloneProcessingGraph(Builder builder) {
+  private void createStreamletCloneProcessingGraph(Builder builder) {
     /**
      * A supplier streamlet of random GameScore objects is cloned into two
      * separate streamlets.
