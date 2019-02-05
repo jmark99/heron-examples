@@ -4,22 +4,26 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.JoinType;
+import org.apache.heron.streamlet.KeyValue;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.WindowConfig;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
-import java.io.Serializable;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
+/**
+ * Join operations unify two streamlets on a key (join operations thus require KV streamlets).
+ * Each KeyValue object in a streamlet has, by definition, a key.
+ */
 public class SimpleJoinStreamlet {
 
   private static final Logger LOG = Logger.getLogger(SimpleJoinStreamlet.class.getName());
 
   private static int msgTimeout = 30;
-  private static int delay = 500;
   private static boolean addDelay = true;
+  private static int msDelay = 500;
+  private static int nsDelay = 1;
   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
   // Default Heron resources to be applied to the topology
@@ -30,7 +34,6 @@ public class SimpleJoinStreamlet {
   public static void main(String[] args) throws Exception {
 
     LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
     LOG.info(">>> msgTimeout:   " + msgTimeout);
     LOG.info(">>> semantics:    " + semantics);
 
@@ -42,19 +45,17 @@ public class SimpleJoinStreamlet {
     LOG.info(">>> run SimpleJoinStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    createIntegerProcessingGraph(builder);
+    createJoinrocessingGraph(builder);
 
     Config config = Config.newBuilder()
         .setNumContainers(NUM_CONTAINERS)
         .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
         .setPerContainerCpu(CPU)
         .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
         .build();
 
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
     else
       new Runner().run(topologyName, config, builder);
   }
@@ -65,58 +66,42 @@ public class SimpleJoinStreamlet {
   // Topology specific setup and processing graph creation.
   //
 
-  private static class IntProducer implements Serializable {
+  static int cnt1 = 0;
+  static int cnt2 = 1000;
 
-    private static final long serialVersionUID = -643652260080312188L;
+  private void createJoinrocessingGraph(Builder builder) {
 
-    private int anInt;
+    //KeyValue<String,String> topologyKeyValue = new KeyValue<>("heron-api", "topology-api");
 
-    IntProducer() {
-      this.anInt = ThreadLocalRandom.current().nextInt(1,11);
+    Streamlet<KeyValue<String,String>> javaApi
+        = builder.newSource(() -> {
+          if (addDelay) {
+            StreamletUtils.sleep(msDelay, nsDelay);
+          }
+          return new KeyValue<>("heron-api", "java-api" + cnt2++);
+    });
+
+    Streamlet<KeyValue<String,String>> streamletApi
+        = builder.newSource(() -> {
       if (addDelay) {
-        StreamletUtils.sleep(delay);
+        StreamletUtils.sleep(msDelay, nsDelay);
       }
-      LOG.info(">>> IntProducer created " + this.anInt);
-    }
+      return new KeyValue<>("heron-api", "streamlet-api" + cnt1++);
+    });
 
-    IntProducer(int lo, int hi) {
-      this.anInt = ThreadLocalRandom.current().nextInt(lo,hi);
-      if (addDelay) {
-        StreamletUtils.sleep(delay);
-      }
-      LOG.info(">>> IntProducer created " + this.anInt);
-    }
-
-    int getInt() {
-      return anInt;
-    }
-
-    @Override public String toString() {
-      return "IntProducer{" + "anInt=" + anInt + '}';
-    }
-  }
-
-  private void createIntegerProcessingGraph(Builder builder) {
-    Streamlet<IntProducer> streamlet1
-        = builder.newSource(() -> new IntProducer(1, 11));
-    Streamlet<IntProducer> streamlet2
-        = builder.newSource(() -> new IntProducer(101, 111));
-
-    streamlet1.join(
-        streamlet2,
-        stream1 -> stream1.getInt(),
-        stream2 -> stream2.getInt(),
-        WindowConfig.TumblingCountWindow(10),
-        JoinType.INNER,
-        (num1, num2) -> (num1.getInt() == num2.getInt()) ? num1.getInt() + num2.getInt() : 0)
-        .reduceByKeyAndWindow(
-            kv -> String.format(">>> user-%s", kv.getKey().getKey()),
-            kv -> kv.getValue(),
-            WindowConfig.TumblingCountWindow(20),
-            (cumulative, incoming) -> cumulative + incoming)
+    streamletApi
+        .join(
+            javaApi,
+            (sapi -> sapi.getKey()),
+            (japi -> japi.getKey()),
+            WindowConfig.TumblingCountWindow(5),
+            JoinType.INNER, KeyValue::create)
         .consume(kw -> {
-          LOG.info(String.format(">>> (user: %s, ints: %d)", kw.getKey().getKey(), kw.getValue()));
+          LOG.info(String.format(">>> key: %s, val: %s",
+              kw.getKey().getKey(),
+              kw.getValue()));
         });
+
   }
 
 }
