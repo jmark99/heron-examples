@@ -3,24 +3,24 @@ package com.jmo.streamlets;
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
-import org.apache.heron.streamlet.JoinType;
-import org.apache.heron.streamlet.KeyValue;
 import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.WindowConfig;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
 /**
- * Join operations unify two streamlets on a key (join operations thus require KV streamlets).
- * Each KeyValue object in a streamlet has, by definition, a key.
+ * When you assign a number of partitions to a processing step, each step that comes after it
+ * inherits that number of partitions. Thus, if you assign 5 partitions to a map operation, then any
+ * mapToKV, flatMap, filter, etc. operations that come after it will also be assigned 5 partitions.
+ * But you can also change the number of partitions for a processing step (as well as the number of
+ * partitions for downstream operations) using repartition.
  */
-public class SimpleJoinStreamlet {
+public class SimpleRepartitionStreamlet2 {
 
-  private static final Logger LOG = Logger.getLogger(SimpleJoinStreamlet.class.getName());
+  private static final Logger LOG = Logger.getLogger(SimpleRepartitionStreamlet2.class.getName());
 
-  private static int msgTimeout = 30;
   private static boolean throttle = true;
   private static int msDelay = 500;
   private static int nsDelay = 0;
@@ -32,14 +32,14 @@ public class SimpleJoinStreamlet {
   private static final int NUM_CONTAINERS = 2;
 
   public static void main(String[] args) throws Exception {
-    SimpleJoinStreamlet streamletInstance = new SimpleJoinStreamlet();
+    SimpleRepartitionStreamlet2 streamletInstance = new SimpleRepartitionStreamlet2();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
   public void runStreamlet(String topologyName) {
 
     Builder builder = Builder.newBuilder();
-    createJoinProcessingGraph(builder);
+    createRepartitionProcessingGraph(builder);
 
     Config config = Config.newBuilder()
         .setNumContainers(NUM_CONTAINERS)
@@ -58,37 +58,35 @@ public class SimpleJoinStreamlet {
   // Topology specific setup and processing graph creation.
   //
 
-  static int cnt1 = 0;
-  static int cnt2 = 1000;
+  private void createRepartitionProcessingGraph(Builder builder) {
 
-  private void createJoinProcessingGraph(Builder builder) {
+    Streamlet<Integer> zeroSource = builder.newSource(() -> {
+      StreamletUtils.sleep(1000);
+      return ThreadLocalRandom.current().nextInt(0, 10);
+    });
 
-    Streamlet<KeyValue<String,String>> javaApi = builder.newSource(() -> {
+    Streamlet<Integer> randomSource = builder.newSource(() -> {
       if (throttle) {
         StreamletUtils.sleep(msDelay, nsDelay);
       }
-      return new KeyValue<>("heron-api", "java-api" + cnt2++);
+      return ThreadLocalRandom.current().nextInt(1, 11);
     });
 
-    Streamlet<KeyValue<String,String>> streamletApi = builder.newSource(() -> {
-      if (throttle) {
-        StreamletUtils.sleep(msDelay, nsDelay);
-      }
-      return new KeyValue<>("heron-api", "streamlet-api" + cnt1++);
-    });
-
-    streamletApi
-        .join(javaApi,
-            KeyValue::getKey,
-            KeyValue::getKey,
-            WindowConfig.TumblingCountWindow(5),
-            JoinType.INNER,
-            KeyValue::create)
-        .consume(kw -> {
-          System.out.println(String.format(">>> key: %s, val: %s",
-              kw.getKey().getKey(), kw.getValue()));
-    });
-
+    randomSource
+        .setName("random-ints")
+        .setNumPartitions(3)
+        .map(i -> i + 1)
+        .setName("add-one")
+        .repartition(3)
+        .union(zeroSource)
+        .setName("unify-streams")
+        .repartition(2)
+        .filter(i -> i != 2)
+        .setName("remove-all-twos")
+        .repartition(1)
+        .consume(i -> {
+          System.out.println(String.format("Filtered result: %d", i));
+        });
   }
 
 }

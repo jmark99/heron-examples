@@ -1,3 +1,5 @@
+package com.jmo.streamlets;
+
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
@@ -7,9 +9,15 @@ import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.util.logging.Logger;
 
-public class CLASSNAME {
+/**
+ * Consume operations are like sink operations except they don't require implementing a full sink
+ * interface. Consume operations are thus suited for simple operations like formatted logging.
+ * <p>
+ * In this example, random integers are supplied and all even ints are formatted and logged.
+ */
+public class SimpleConsumeStreamlet {
 
-private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
+  private static final Logger LOG = Logger.getLogger(SimpleConsumeStreamlet.class.getName());
 
   private static int msgTimeout = 30;
   private static boolean throttle = true;
@@ -24,26 +32,26 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
 
   public static void main(String[] args) throws Exception {
 
-    LOG.info("Throttle:     " + throttle);
-    LOG.info("Msg Timeout:  " + msgTimeout);
-    LOG.info("Semantics:    " + semantics);
+    LOG.info("throttle:     " + throttle);
+    LOG.info("msDelay:      " + msDelay);
+    LOG.info("nsDelay:      " + nsDelay);
+    LOG.info("msgTimeout:   " + msgTimeout);
+    LOG.info("semantics:    " + semantics);
 
-    CLASSNAME streamletInstance = new CLASSNAME();
+    SimpleConsumeStreamlet streamletInstance = new SimpleConsumeStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
   public void runStreamlet(String topologyName) {
 
     Builder builder = Builder.newBuilder();
-    createProcessingGraph(builder);
+    createConsumeProcessingGraph(builder);
 
     Config config = Config.newBuilder()
         .setNumContainers(NUM_CONTAINERS)
         .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
         .setPerContainerCpu(CPU)
         .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
         .build();
 
     if (topologyName == null)
@@ -56,6 +64,20 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
   // Topology specific setup and processing graph creation.
   //
 
-  private void createProcessingGraph(Builder builder) {
+  private void createConsumeProcessingGraph(Builder builder) {
+
+    Streamlet<Integer> intSource = builder.newSource(() -> {
+      if (throttle) {
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
+      return StreamletUtils.generateRandomInteger(0, 100);
+    });
+
+    intSource
+        .filter(i -> i % 2 == 0)
+        .consume(i -> {
+          String message = String.format(">>> Even number found: %d", i);
+          System.out.println(message);
+        });
   }
 }

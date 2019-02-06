@@ -94,9 +94,9 @@ public class SmartwatchStreamlet {
     builder.newSource(SmartWatchReading::new).setName("incoming-watch-readings")
         .reduceByKeyAndWindow(
             // Key extractor
-            reading -> reading.getJoggerId(),
+            SmartWatchReading::getJoggerId,
             // Value extractor
-            reading -> reading.getFeetRun(),
+            SmartWatchReading::getFeetRun,
             // The time window (1 minute of clock time)
             WindowConfig.TumblingTimeWindow(Duration.ofSeconds(10)),
             // The reduce function (produces a cumulative sum)

@@ -12,6 +12,13 @@ import java.util.logging.Logger;
 
   private static final Logger LOG = Logger.getLogger(SimplePulsarStreamlet.class.getName());
 
+   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+
+   // Default Heron resources to be applied to the topology
+   private static final double CPU = 1.5;
+   private static final int GIGABYTES_OF_RAM = 8;
+   private static final int NUM_CONTAINERS = 2;
+
    public static void main(String[] args) throws Exception {
      SimplePulsarStreamlet streamletInstance = new SimplePulsarStreamlet();
      streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
@@ -24,7 +31,13 @@ import java.util.logging.Logger;
 
     // Add processingGraph here
 
-    Config config = StreamletUtils.getAtLeastOnceConfig();
+    Config config = Config.newBuilder()
+        .setNumContainers(NUM_CONTAINERS)
+        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
+        .setPerContainerCpu(CPU)
+        .setDeliverySemantics(semantics)
+        .build();
+
     if (topologyName == null)
       StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
     else
