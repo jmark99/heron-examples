@@ -5,6 +5,8 @@ import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
+import java.util.Properties;
+
 import java.util.logging.Logger;
 
 public class CLASSNAME {
@@ -15,18 +17,29 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
   private static boolean throttle = true;
   private static int msDelay = 0;
   private static int nsDelay = 1;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
   // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+  private final double CPU = 1.5;
+  private final int GIGABYTES_OF_RAM = 8;
+  private final int NUM_CONTAINERS = 2;
+  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
   public static void main(String[] args) throws Exception {
 
-    LOG.info("Throttle:     " + throttle);
-    LOG.info("Msg Timeout:  " + msgTimeout);
-    LOG.info("Semantics:    " + semantics);
+    Properties prop = new Properties();
+    try(InputStream input = new FileInputStream("conf/config.properties")) {
+      prop.load(input);
+      throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
+      msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
+      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"));
+      cpu = Double.parseDouble(prop.getProperty("CPU"));
+      gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
+      numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
+      semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
+    } catch (IOException ex) {
+      LOG.severe("Error reading config file");
+      return;
+    }
 
     CLASSNAME streamletInstance = new CLASSNAME();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));

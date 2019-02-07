@@ -9,58 +9,68 @@ import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Source;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
 public class ComplexSourceStreamlet {
 
   private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
 
-  private static int msgTimeout = 30;
-  private static boolean addDelay = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+  private static boolean throttle;
+  private static int msDelay;
+  private static int nsDelay;
 
   // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+  private static double cpu;
+  private static int gigabytesOfRam;
+  private static int numContainers;
+  private static Config.DeliverySemantics semantics;
 
-  public ComplexSourceStreamlet() {
-  }
+  public ComplexSourceStreamlet() {}
 
   public static void main(String[] args) throws Exception {
 
-    LOG.info(">>> addDelay:   " + addDelay);
-    LOG.info(">>> msDelay:    " + msDelay);
-    LOG.info(">>> nsDelay:    " + nsDelay);
-    LOG.info(">>> msgTimeout: " + msgTimeout);
-    LOG.info(">>> semantics:  " + semantics);
+    Properties prop = new Properties();
+    try(InputStream input = new FileInputStream("conf/config.properties")) {
+      prop.load(input);
+      throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
+      msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
+      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"g));
+      cpu = Double.parseDouble(prop.getProperty("CPU"));
+      gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
+      numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
+      semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
+    } catch (IOException ex) {
+      LOG.severe("Error reading config file");
+      return;
+    }
 
     ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
     complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
   public void runStreamlet(String topologyName) {
-    LOG.info(">>> run ComplexSourceStreamlet...");
 
     Builder builder = Builder.newBuilder();
-    createComplexSourcePRocessingGraph(builder);
+    createProcessingGraph(builder);
 
     Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
+        .setNumContainers(numContainers)
+        .setPerContainerRamInGigabytes(gigabytesOfRam)
+        .setPerContainerCpu(cpu)
         .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false).build();
+        .build();
 
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
     else
       new Runner().run(topologyName, config, builder);
   }
@@ -79,11 +89,7 @@ public class ComplexSourceStreamlet {
       intList = new ArrayList<>();
     }
 
-    /**
-     * The setup functions defines the instantiation logic for the source.
-     */
-    public void setup(Context context) {
-    }
+    public void setup(Context context) {}
 
     /**
      * The get function defines how elements for the source streamlet are
@@ -91,56 +97,42 @@ public class ComplexSourceStreamlet {
      */
     public Collection<Integer> get() {
       intList.clear();
-      int i = rnd.nextInt(25) + 1;
+      int i = ThreadLocalRandom.current().nextInt(25);
       intList.add(i + 1);
       intList.add(i + 2);
       intList.add(i + 3);
-      StreamletUtils.sleep(msDelay, nsDelay);
+      if (throttle) {
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
       return intList;
     }
 
-    public void cleanup() {
-    }
+    public void cleanup() {}
   }
 
   private static class ComplexIntegerSink<T> implements Sink<T> {
 
     private static final long serialVersionUID = -2565224820596857979L;
 
-    ComplexIntegerSink() {
-    }
+    ComplexIntegerSink() {}
 
-    /**
-     * The setup function is called before the sink is used. Any complex
-     * instantiation logic for the sink should go here.
-     */
-    public void setup(Context context) {
-    }
+    public void setup(Context context) {}
 
-    /**
-     * The put function defines how each incoming streamlet element is
-     * actually processed. In this case, each incoming element is converted
-     * to a byte array and written to the temporary file (successful writes
-     * are also logged). Any exceptions are converted to RuntimeExceptions,
-     * which will effectively kill the topology.
-     */
     public void put(T element) {
-      LOG.info(">>>> element: " + element);
+      LOG.info("Element: " + element);
     }
 
-    /**
-     * Any cleanup logic for the sink can be applied here.
-     */
-    public void cleanup() {
-    }
+    public void cleanup() {}
   }
 
-  private void createComplexSourcePRocessingGraph(Builder builder) {
+  private void createProcessingGraph(Builder builder) {
+
     Source<Integer> integerSource = new IntegerSource();
 
     builder.newSource(integerSource)
         .setName("integer-source")
         .map(i -> i * 100)
+        .setName("multiply-by-100")
         .toSink(new ComplexIntegerSink<>());
   }
 }

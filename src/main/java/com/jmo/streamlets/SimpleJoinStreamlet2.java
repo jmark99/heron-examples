@@ -23,16 +23,16 @@ public class SimpleJoinStreamlet2 {
 
   private static final Logger LOG = Logger.getLogger(SimpleJoinStreamlet2.class.getName());
 
-  private static int msgTimeout = 45;
+  private static int msgTimeout = 30;
   private static boolean throttle = true;
-  private static int msDelay = 2000;
+  private static int msDelay = 500;
   private static int nsDelay = 0;
   private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
 
   // Default Heron resources to be applied to the topology
   private static final double CPU = 1.5;
   private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+  private static final int NUM_CONTAINERS = 1;
 
   public static void main(String[] args) throws Exception {
     SimpleJoinStreamlet2 streamletInstance = new SimpleJoinStreamlet2();
