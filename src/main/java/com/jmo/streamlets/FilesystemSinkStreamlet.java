@@ -9,11 +9,14 @@ import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Logger;
 
@@ -21,18 +24,34 @@ public class FilesystemSinkStreamlet {
 
   private static final Logger LOG = Logger.getLogger(FilesystemSinkStreamlet.class.getName());
 
-  private static int msgTimeout = 30;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+  private static boolean throttle;
+  private static int msDelay;
+  private static int nsDelay;
+  private static int msgTimeout;
 
   // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+  private static double cpu;
+  private static int gigabytesOfRam;
+  private static int numContainers;
+  private static Config.DeliverySemantics semantics;
 
   public static void main(String[] args) throws Exception {
 
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
+    Properties prop = new Properties();
+    try(InputStream input = new FileInputStream("conf/config.properties")) {
+      prop.load(input);
+      throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
+      msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
+      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"));
+      cpu = Double.parseDouble(prop.getProperty("CPU"));
+      gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
+      numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
+      semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
+      msgTimeout = Integer.parseInt(prop.getProperty("MSG_TIMEOUT"));
+    } catch (IOException ex) {
+      LOG.severe("Error reading config file");
+      return;
+    }
 
     FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
@@ -45,12 +64,11 @@ public class FilesystemSinkStreamlet {
     createFilesystemSinkProcessingGraph(builder);
 
     Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
+        .setNumContainers(numContainers)
+        .setPerContainerRamInGigabytes(gigabytesOfRam)
+        .setPerContainerCpu(cpu)
         .setDeliverySemantics(semantics)
         .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
         .build();
 
     if (topologyName == null)

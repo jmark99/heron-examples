@@ -41,15 +41,7 @@ public class StreamletUtils {
     return ls.get(ThreadLocalRandom.current().nextInt(ls.size()));
   }
 
-  /**
-   * Fetches the topology's parallelism from the second-command-line
-   * argument or defers to a supplied default.
-   */
-  public static int getParallelism(String[] args, int defaultParallelism) {
-    return (args.length > 1) ? Integer.parseInt(args[1]) : defaultParallelism;
-  }
-
-  /**
+   /**
    * Converts a list of integers into a comma-separated string.
    */
   public static String intListAsString(List<Integer> ls) {

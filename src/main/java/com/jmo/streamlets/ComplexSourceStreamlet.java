@@ -27,6 +27,7 @@ public class ComplexSourceStreamlet {
   private static boolean throttle;
   private static int msDelay;
   private static int nsDelay;
+  private static int msgTimeout;
 
   // Default Heron resources to be applied to the topology
   private static double cpu;
@@ -43,11 +44,12 @@ public class ComplexSourceStreamlet {
       prop.load(input);
       throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
       msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
-      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"g));
+      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"));
       cpu = Double.parseDouble(prop.getProperty("CPU"));
       gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
       numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
       semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
+      msgTimeout = Integer.parseInt(prop.getProperty("MSG_TIMEOUT"));
     } catch (IOException ex) {
       LOG.severe("Error reading config file");
       return;
@@ -67,6 +69,7 @@ public class ComplexSourceStreamlet {
         .setPerContainerRamInGigabytes(gigabytesOfRam)
         .setPerContainerCpu(cpu)
         .setDeliverySemantics(semantics)
+        .setUserConfig("topology.message.timeout.secs", msgTimeout)
         .build();
 
     if (topologyName == null)
