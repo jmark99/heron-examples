@@ -13,20 +13,30 @@ public class CLASSNAME {
 
 private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
 
-  private static int msgTimeout = 30;
-  private static boolean throttle = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
+  private static boolean throttle;
+  private static int msDelay;
+  private static int nsDelay;
+  private static int msgTimeout;
+  private static int simTimeInSecs;
 
   // Default Heron resources to be applied to the topology
-  private final double CPU = 1.5;
-  private final int GIGABYTES_OF_RAM = 8;
-  private final int NUM_CONTAINERS = 2;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
+  private static double cpu;
+  private static int gigabytesOfRam;
+  private static int numContainers;
+  private static Config.DeliverySemantics semantics;
 
   public static void main(String[] args) throws Exception {
 
     Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error reading config file");
+      return;
+    }
+    FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
+    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+  }
+
+  private static boolean readProperties(Properties prop) {
     try(InputStream input = new FileInputStream("conf/config.properties")) {
       prop.load(input);
       throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
@@ -36,13 +46,12 @@ private static final Logger LOG = Logger.getLogger(CLASSNAME.class.getName());
       gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
       numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
       semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
+      msgTimeout = Integer.parseInt(prop.getProperty("MSG_TIMEOUT"));
+      simTimeInSecs = Integer.parseInt(prop.getProperty("SIM_TIME_IN_SECS"));
     } catch (IOException ex) {
-      LOG.severe("Error reading config file");
-      return;
+      return false;
     }
-
-    CLASSNAME streamletInstance = new CLASSNAME();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    return true;
   }
 
   public void runStreamlet(String topologyName) {

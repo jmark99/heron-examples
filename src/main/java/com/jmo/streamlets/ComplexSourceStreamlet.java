@@ -4,78 +4,33 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Source;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
-public class ComplexSourceStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(ComplexSourceStreamlet.class.getName());
-
-  private static boolean throttle;
-  private static int msDelay;
-  private static int nsDelay;
-  private static int msgTimeout;
-
-  // Default Heron resources to be applied to the topology
-  private static double cpu;
-  private static int gigabytesOfRam;
-  private static int numContainers;
-  private static Config.DeliverySemantics semantics;
-
-  public ComplexSourceStreamlet() {}
+public class ComplexSourceStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
     Properties prop = new Properties();
-    try(InputStream input = new FileInputStream("conf/config.properties")) {
-      prop.load(input);
-      throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
-      msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
-      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"));
-      cpu = Double.parseDouble(prop.getProperty("CPU"));
-      gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
-      numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
-      semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
-      msgTimeout = Integer.parseInt(prop.getProperty("MSG_TIMEOUT"));
-    } catch (IOException ex) {
-      LOG.severe("Error reading config file");
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
       return;
     }
-
-    ComplexSourceStreamlet complexTopology = new ComplexSourceStreamlet();
-    complexTopology.runStreamlet(StreamletUtils.getTopologyName(args));
+    IBaseStreamlet theStreamlet = new ComplexSourceStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
     createProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(numContainers)
-        .setPerContainerRamInGigabytes(gigabytesOfRam)
-        .setPerContainerCpu(cpu)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
-    else
-      new Runner().run(topologyName, config, builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -128,8 +83,7 @@ public class ComplexSourceStreamlet {
     public void cleanup() {}
   }
 
-  private void createProcessingGraph(Builder builder) {
-
+  @Override public void createProcessingGraph(Builder builder) {
     Source<Integer> integerSource = new IntegerSource();
 
     builder.newSource(integerSource)

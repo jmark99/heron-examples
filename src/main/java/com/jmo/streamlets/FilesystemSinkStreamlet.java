@@ -4,77 +4,36 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
-import org.apache.heron.streamlet.impl.BuilderImpl;
+import org.apache.heron.streamlet.Streamlet;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
-public class FilesystemSinkStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(FilesystemSinkStreamlet.class.getName());
-
-  private static boolean throttle;
-  private static int msDelay;
-  private static int nsDelay;
-  private static int msgTimeout;
-
-  // Default Heron resources to be applied to the topology
-  private static double cpu;
-  private static int gigabytesOfRam;
-  private static int numContainers;
-  private static Config.DeliverySemantics semantics;
+public class FilesystemSinkStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
 
     Properties prop = new Properties();
-    try(InputStream input = new FileInputStream("conf/config.properties")) {
-      prop.load(input);
-      throttle = Boolean.parseBoolean(prop.getProperty("THROTTLE"));
-      msDelay = Integer.parseInt(prop.getProperty("MS_DELAY"));
-      nsDelay = Integer.parseInt(prop.getProperty("NS_DELAY"));
-      cpu = Double.parseDouble(prop.getProperty("CPU"));
-      gigabytesOfRam = Integer.parseInt(prop.getProperty("GIGABYTES_OF_RAM"));
-      numContainers = Integer.parseInt(prop.getProperty("NUM_CONTAINERS"));
-      semantics = Config.DeliverySemantics.valueOf(prop.getProperty("SEMANTICS"));
-      msgTimeout = Integer.parseInt(prop.getProperty("MSG_TIMEOUT"));
-    } catch (IOException ex) {
+    if (!readProperties(prop)) {
       LOG.severe("Error reading config file");
       return;
     }
-
     FilesystemSinkStreamlet streamletInstance = new FilesystemSinkStreamlet();
     streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) throws IOException {
-    LOG.info(">>> run FilesystemSinkStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createFilesystemSinkProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(numContainers)
-        .setPerContainerRamInGigabytes(gigabytesOfRam)
-        .setPerContainerCpu(cpu)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -86,7 +45,7 @@ public class FilesystemSinkStreamlet {
    * method is invoked in a processing graph.
    */
   private static class FilesystemSink<T> implements Sink<T> {
-    private static final long serialVersionUID = -96514621878356224L;
+    private static final long serialVersionUID = 3795118475903896607L;
     private Path tempFilePath;
     private File tempFile;
 
@@ -129,18 +88,29 @@ public class FilesystemSinkStreamlet {
     }
   }
 
-  private void createFilesystemSinkProcessingGraph(Builder builder) throws IOException {
+  @Override public void createProcessingGraph(Builder builder) {
+
     // Creates a temporary file to write output into.
-    File file = File.createTempFile("filesystem-sink-example", ".tmp");
+    File file = null;
+    try {
+      file = File.createTempFile("filesystem-sink-example", ".tmp");
+    } catch (IOException e) {
+      LOG.warning("Failed to create temporary file");
+    }
 
     LOG.info(String.format("Ready to write to file %s", file.getAbsolutePath()));
 
-    builder.newSource(() -> {
-      // This applies a "brake" that makes the processing graph write
-      // to the temporary file at a reasonable, readable pace.
-      StreamletUtils.sleep(500);
+    Streamlet<Integer> intSource = builder.newSource(() -> {
+      if (throttle) {
+        // This applies a "brake" that makes the processing graph write
+        // to the temporary file at a reasonable, readable pace.
+        StreamletUtils.sleep(msDelay, nsDelay);
+      }
       return ThreadLocalRandom.current().nextInt(100);
-    }).setName("incoming-integers")
+    });
+
+    intSource
+        .setName("incoming-integers")
         // Here, the FilesystemSink implementation of the Sink
         // interface is passed to the toSink function.
         .toSink(new FilesystemSink<>(file));

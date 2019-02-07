@@ -53,7 +53,7 @@ public class SimpleJoinStreamlet2 {
         .build();
 
     if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 120);
+      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
     else
       new Runner().run(topologyName, config, builder);
   }
