@@ -4,77 +4,49 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.KeyValue;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.WindowConfig;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
-public class SmartwatchStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(SmartwatchStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static int delay = 1; // milisecond delay between emitting of tuples.
-  private static boolean addDelay = true;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
-
-  private static final List<String> JOGGERS = Arrays.asList("bill", "ted");
+public class SmartwatchStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    SmartwatchStreamlet streamletInstance = new SmartwatchStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new SmartwatchStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(final String topologyName) {
-    LOG.info(">>> run SmartwatchStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createSmartwatchProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 600);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
   // Topology specific setup and processing graph creation.
   //
+
+  private static final List<String> JOGGERS = Arrays.asList("bill", "ted");
+
   static class SmartWatchReading implements Serializable {
     private static final long serialVersionUID = -8398591517116371456L;
     private String joggerId;
     private int feetRun;
 
     SmartWatchReading() {
-      if (addDelay) {
-        StreamletUtils.sleep(delay);
+      if (throttle) {
+        StreamletUtils.sleep(msDelay, nsDelay);
       }
       this.joggerId = StreamletUtils.randomFromList(JOGGERS);
       this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
@@ -89,7 +61,7 @@ public class SmartwatchStreamlet {
     }
   }
 
-  private void createSmartwatchProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
 
     builder.newSource(SmartWatchReading::new).setName("incoming-watch-readings")
         .reduceByKeyAndWindow(
@@ -118,8 +90,10 @@ public class SmartwatchStreamlet {
 
       // Return a per-jogger average pace
       return new KeyValue<>(keyWindow.getKey().getKey(), paceString);
-    }).setName("calculate-average-speed").consume(kv -> {
-      String logMessage = String
+    })
+        .setName("calculate-average-speed")
+        .consume(kv -> {
+          String logMessage = String
           .format("(runner: %s, avgFeetPerMinute: %s)", kv.getKey(), kv.getValue());
 
       LOG.info(logMessage);

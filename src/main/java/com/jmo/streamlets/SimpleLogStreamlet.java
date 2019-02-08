@@ -1,7 +1,5 @@
 package com.jmo.streamlets;
 
-//public class SimpleLogStreamlet {
-
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;

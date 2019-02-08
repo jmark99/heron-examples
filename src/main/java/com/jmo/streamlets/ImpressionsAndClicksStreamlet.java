@@ -4,63 +4,34 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.JoinType;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.WindowConfig;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ImpressionsAndClicksStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(ImpressionsAndClicksStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static int delay = 500;
-  private static boolean addDelay = true;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class ImpressionsAndClicksStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    ImpressionsAndClicksStreamlet streamletInstance = new ImpressionsAndClicksStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new ImpressionsAndClicksStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-    LOG.info(">>> run ImpressionsAndClicksStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createImpressionsAndClicksProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -92,8 +63,8 @@ public class ImpressionsAndClicksStreamlet {
       this.adId = StreamletUtils.randomFromList(ADS);
       this.userId = StreamletUtils.randomFromList(USERS);
       this.impressionId = UUID.randomUUID().toString();
-      if (addDelay) {
-        StreamletUtils.sleep(delay);
+      if (throttle) {
+        StreamletUtils.sleep(msDelay, nsDelay);
       }
     }
 
@@ -124,8 +95,8 @@ public class ImpressionsAndClicksStreamlet {
       this.userId = StreamletUtils.randomFromList(USERS);
       this.clickId = UUID.randomUUID().toString();
       LOG.info(String.format("Instantiating click: %s", this));
-      if (addDelay) {
-        StreamletUtils.sleep(delay);
+      if (throttle) {
+        StreamletUtils.sleep(nsDelay, nsDelay);
       }
     }
 
@@ -142,7 +113,7 @@ public class ImpressionsAndClicksStreamlet {
     }
   }
 
-  private void createImpressionsAndClicksProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
     // A KVStreamlet is produced. Each element is a KeyValue object where the key
     // is the impression ID and the user ID is the value.
     Streamlet<AdImpression> impressions = builder.newSource(AdImpression::new);
@@ -166,7 +137,7 @@ public class ImpressionsAndClicksStreamlet {
             // Key extractor for the clicks streamlet
             click -> click.getUserId(),
             // Window configuration for the join operation
-            WindowConfig.TumblingCountWindow(5),
+            WindowConfig.TumblingCountWindow(25),
             // Join type (inner join means that all elements from both streams will be included)
             JoinType.INNER,
             // For each element resulting from the join operation, a value of 1 will be provided
@@ -179,7 +150,7 @@ public class ImpressionsAndClicksStreamlet {
             // Value extractor for the reduce operation
             kv -> kv.getValue(),
             // Window configuration for the reduce operation
-            WindowConfig.TumblingCountWindow(10),
+            WindowConfig.TumblingCountWindow(50),
             // A running cumulative total is calculated for each key
             (cumulative, incoming) -> cumulative + incoming)
         // Finally, the consumer operation provides formatted log output

@@ -4,58 +4,36 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.JoinType;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.WindowConfig;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
 /**
  * Join operations unify two streamlets on a key (join operations thus require KV streamlets).
  * Each KeyValue object in a streamlet has, by definition, a key.
  */
-public class SimpleJoinStreamlet2 {
-
-  private static final Logger LOG = Logger.getLogger(SimpleJoinStreamlet2.class.getName());
-
-  private static int msgTimeout = 30;
-  private static boolean throttle = true;
-  private static int msDelay = 500;
-  private static int nsDelay = 0;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 1;
+public class SimpleJoinStreamlet2  extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-    SimpleJoinStreamlet2 streamletInstance = new SimpleJoinStreamlet2();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new SimpleJoinStreamlet2();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
     createProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
-    else
-      new Runner().run(topologyName, config, builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -91,7 +69,7 @@ public class SimpleJoinStreamlet2 {
     }
   }
 
-  private void createProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
 
     Streamlet<Score> scores1 = builder.newSource(Score::new);
     Streamlet<Score> scores2 = builder.newSource(Score::new);

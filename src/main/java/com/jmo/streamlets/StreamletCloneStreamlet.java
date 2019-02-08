@@ -4,62 +4,33 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class StreamletCloneStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(StreamletCloneStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static int delay = 1; // milisecond delay between emitting of tuples.
-  private static boolean addDelay = true;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class StreamletCloneStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    StreamletCloneStreamlet streamletInstance = new StreamletCloneStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new StreamletCloneStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-    LOG.info(">>> run StreamletCloneStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createStreamletCloneProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -82,8 +53,8 @@ public class StreamletCloneStreamlet {
     private int score;
 
     GameScore() {
-      if (addDelay) {
-        StreamletUtils.sleep(delay);
+      if (throttle) {
+        StreamletUtils.sleep(msDelay, nsDelay);
       }
       this.playerId = StreamletUtils.randomFromList(PLAYERS);
       this.score = ThreadLocalRandom.current().nextInt(1000);
@@ -128,6 +99,7 @@ public class StreamletCloneStreamlet {
    * A logging sink that simply prints a formatted log message for each incoming score.
    */
   private static class FormattedLogSink implements Sink<GameScore> {
+
     private static final long serialVersionUID = -11392565006864298L;
 
     public void setup(Context context) {
@@ -144,7 +116,7 @@ public class StreamletCloneStreamlet {
     }
   }
 
-  private void createStreamletCloneProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
     /**
      * A supplier streamlet of random GameScore objects is cloned into two
      * separate streamlets.

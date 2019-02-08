@@ -3,63 +3,30 @@ package com.jmo.streamlets;
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
 import org.apache.heron.streamlet.WindowConfig;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.Properties;
 
-public class WindowedWordCountStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(WindowedWordCountStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static boolean addDelay = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
-
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class WindowedWordCountStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> msDelay:      " + msDelay);
-    LOG.info(">>> nsDelay:      " + nsDelay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    WindowedWordCountStreamlet streamletInstance = new WindowedWordCountStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new WindowedWordCountStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-    LOG.info(">>> run WindowedWordCountStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-
-    windowedWordCountProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 6*60);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -70,10 +37,10 @@ public class WindowedWordCountStreamlet {
       .asList("I have nothing to declare but my genius", "You can even",
           "Compassion is an action word with no boundaries", "To thine own self be true");
 
-  private void windowedWordCountProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
 
     Streamlet<String> sentenceStreamlet = builder.newSource(() -> {
-      if (addDelay) {
+      if (throttle) {
         StreamletUtils.sleep(msDelay, nsDelay);
       }
       return StreamletUtils.randomFromList(SENTENCES);

@@ -3,60 +3,31 @@ package com.jmo.streamlets;
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
-public class RepartitionerStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(RepartitionerStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static int delay = 50; // milisecond delay between emitting of tuples.
-  private static boolean addDelay = true;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class RepartitionerStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> delay:        " + delay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    RepartitionerStreamlet streamletInstance = new RepartitionerStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new RepartitionerStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-    LOG.info(">>> run RepartitionerStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-
-    createRepartitionProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -81,7 +52,7 @@ public class RepartitionerStreamlet {
     } else if (incomingInteger > 76 && incomingInteger <= 100) {
       partitions = Arrays.asList(6, 7);
     } else {
-      partitions = Arrays.asList(ThreadLocalRandom.current().nextInt(0, 8));
+      partitions = Collections.singletonList(ThreadLocalRandom.current().nextInt(0, 8));
     }
 
     String logMessage = String.format("Sending value %d to partitions: %s",
@@ -93,12 +64,12 @@ public class RepartitionerStreamlet {
     return partitions;
   }
 
-  private void createRepartitionProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
     Streamlet<Integer> randomIntegers = builder
         .newSource(() -> {
           // Random integers are emitted every 50 milliseconds
-          if (addDelay) {
-            StreamletUtils.sleep(delay);
+          if (throttle) {
+            StreamletUtils.sleep(msDelay, nsDelay);
           }
           return ThreadLocalRandom.current().nextInt(100);
         })

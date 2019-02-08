@@ -3,61 +3,33 @@ package com.jmo.streamlets;
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
-public class WireRequestsStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(WireRequestsStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static boolean addDelay = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
-
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class WireRequestsStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    WireRequestsStreamlet streamletInstance = new WireRequestsStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new WireRequestsStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-    LOG.info(">>> run WireRequestsStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createWireRequestsProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .setUserConfig("topology.droptuples.upon.backpressure", false)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60*6);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
+
 
   //
   // Topology specific setup and processing graph creation.
@@ -66,7 +38,7 @@ public class WireRequestsStreamlet {
   /**
    * A list of current customers (some good, some bad).
    */
-  static final List<String> CUSTOMERS = Arrays
+  private static final List<String> CUSTOMERS = Arrays
       .asList("honest-tina", "honest-jeff", "scheming-dave", "scheming-linda");
 
   /**
@@ -149,10 +121,11 @@ public class WireRequestsStreamlet {
     return sufficientBalance;
   }
 
-  private void createWireRequestsProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
+
     // Requests from the "quiet" bank branch (high throttling).
     Streamlet<WireRequest> quietBranch = builder
-        .newSource(() -> new WireRequest(2000))
+        .newSource(() -> new WireRequest(200))
         .setNumPartitions(1)
         .setName("quiet-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount)
@@ -160,7 +133,7 @@ public class WireRequestsStreamlet {
 
     // Requests from the "medium" bank branch (medium throttling).
     Streamlet<WireRequest> mediumBranch = builder
-        .newSource(() -> new WireRequest(1000))
+        .newSource(() -> new WireRequest(100))
         .setNumPartitions(2)
         .setName("medium-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount)
@@ -168,7 +141,7 @@ public class WireRequestsStreamlet {
 
     // Requests from the "busy" bank branch (low throttling).
     Streamlet<WireRequest> busyBranch = builder
-        .newSource(() -> new WireRequest(500))
+        .newSource(() -> new WireRequest())
         .setNumPartitions(4)
         .setName("busy-branch-requests")
         .filter(WireRequestsStreamlet::checkRequestAmount)

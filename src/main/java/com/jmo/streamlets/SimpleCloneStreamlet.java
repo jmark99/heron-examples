@@ -4,10 +4,8 @@ import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,8 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.logging.Logger;
 
 /**
  * Clone operations enable you to create any number of "copies" of a streamlet. Each of the "copy"
@@ -31,46 +29,23 @@ import java.util.logging.Logger;
  * <a https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/>
  * https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/</a>,
  */
-public class SimpleCloneStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(SimpleCloneStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static boolean addDelay = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class SimpleCloneStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info(">>> addDelay:     " + addDelay);
-    LOG.info(">>> msgTimeout:   " + msgTimeout);
-    LOG.info(">>> semantics:    " + semantics);
-
-    SimpleCloneStreamlet streamletInstance = new SimpleCloneStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new SimpleCloneStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) throws IOException {
-    LOG.info(">>> run SimpleCloneStreamlet...");
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
-    createCloneProcessingGraph(builder);
-
-    Config config = Config.newBuilder().setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM).setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics).setUserConfig("topology.message.timeout.secs", msgTimeout)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config);
-    else
-      new Runner().run(topologyName, config, builder);
+    createProcessingGraph(builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -83,7 +58,6 @@ public class SimpleCloneStreamlet {
     private File tempFile;
 
     FilesystemSink(File f) {
-      LOG.info(">>>> Using FilesystemSink(" + f.getAbsolutePath() + ")");
       this.tempFile = f;
     }
 
@@ -121,16 +95,26 @@ public class SimpleCloneStreamlet {
     }
   }
 
-  private void createCloneProcessingGraph(Builder builder) throws IOException {
+  @Override public void createProcessingGraph(Builder builder) {
 
-    File file0 = File.createTempFile("copy0-", ".tmp");
-    File file1 = File.createTempFile("copy1-", ".tmp");
-    File file2 = File.createTempFile("copy2-", ".tmp");
-    File file3 = File.createTempFile("copy3-", ".tmp");
-    File file4 = File.createTempFile("copy4-", ".tmp");
+    File file0 = null;
+    File file1 = null;
+    File file2 = null;
+    File file3 = null;
+    File file4 = null;
+
+    try {
+      file0 = File.createTempFile("copy0-", ".tmp");
+      file1 = File.createTempFile("copy1-", ".tmp");
+      file2 = File.createTempFile("copy2-", ".tmp");
+      file3 = File.createTempFile("copy3-", ".tmp");
+      file4 = File.createTempFile("copy4-", ".tmp");
+    } catch (IOException ex) {
+      ex.printStackTrace();
+    }
 
     Streamlet<Integer> integers = builder.newSource(() -> {
-      if (addDelay) {
+      if (throttle) {
         StreamletUtils.sleep(msDelay, nsDelay);
       }
       return ThreadLocalRandom.current()

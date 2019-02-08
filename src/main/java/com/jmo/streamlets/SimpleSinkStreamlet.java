@@ -1,16 +1,13 @@
 package com.jmo.streamlets;
 
-//public class SimpleSinkStreamlet {
 import com.jmo.streamlets.utils.StreamletUtils;
 import org.apache.heron.streamlet.Builder;
 import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Context;
-import org.apache.heron.streamlet.Runner;
 import org.apache.heron.streamlet.Sink;
 import org.apache.heron.streamlet.Streamlet;
-import org.apache.heron.streamlet.impl.BuilderImpl;
 
-import java.util.logging.Logger;
+import java.util.Properties;
 
 /**
  * In processing graphs like the ones you build using the Heron Streamlet API, sinks are essentially
@@ -23,49 +20,23 @@ import java.util.logging.Logger;
  * (in this case, a formatted message is logged to stdout). The cleanup method enables you to
  * specify what happens after the element has been processed by the sink.
  */
-public class SimpleSinkStreamlet {
-
-  private static final Logger LOG = Logger.getLogger(SimpleSinkStreamlet.class.getName());
-
-  private static int msgTimeout = 30;
-  private static boolean throttle = true;
-  private static int msDelay = 0;
-  private static int nsDelay = 1;
-  private static Config.DeliverySemantics semantics = Config.DeliverySemantics.ATLEAST_ONCE;
-
-  // Default Heron resources to be applied to the topology
-  private static final double CPU = 1.5;
-  private static final int GIGABYTES_OF_RAM = 8;
-  private static final int NUM_CONTAINERS = 2;
+public class SimpleSinkStreamlet extends BaseStreamlet implements IBaseStreamlet {
 
   public static void main(String[] args) throws Exception {
-
-    LOG.info("Throttle:     " + throttle);
-    LOG.info("Millis Delay: " + msDelay);
-    LOG.info("Nano Delay:   " + nsDelay);
-    LOG.info("Msg Timeout:  " + msgTimeout);
-    LOG.info("Semantics:    " + semantics);
-
-    SimpleSinkStreamlet streamletInstance = new SimpleSinkStreamlet();
-    streamletInstance.runStreamlet(StreamletUtils.getTopologyName(args));
+    Properties prop = new Properties();
+    if (!readProperties(prop)) {
+      LOG.severe("Error: Failed to read configuration properties");
+      return;
+    }
+    IBaseStreamlet theStreamlet = new SimpleSinkStreamlet();
+    theStreamlet.runStreamlet(StreamletUtils.getTopologyName(args));
   }
 
-  public void runStreamlet(String topologyName) {
-
+  @Override public void runStreamlet(String topologyName) {
     Builder builder = Builder.newBuilder();
     createProcessingGraph(builder);
-
-    Config config = Config.newBuilder()
-        .setNumContainers(NUM_CONTAINERS)
-        .setPerContainerRamInGigabytes(GIGABYTES_OF_RAM)
-        .setPerContainerCpu(CPU)
-        .setDeliverySemantics(semantics)
-        .build();
-
-    if (topologyName == null)
-      StreamletUtils.runInSimulatorMode((BuilderImpl) builder, config, 60);
-    else
-      new Runner().run(topologyName, config, builder);
+    Config config = getConfig();
+    execute(topologyName, builder, config);
   }
 
   //
@@ -90,7 +61,7 @@ public class SimpleSinkStreamlet {
     public void cleanup() {}
   }
 
-  private void createProcessingGraph(Builder builder) {
+  @Override public void createProcessingGraph(Builder builder) {
 
     final Streamlet<String> stringSource = builder.newSource(() -> {
       if (throttle) {
