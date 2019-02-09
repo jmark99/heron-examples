@@ -82,7 +82,7 @@ public class SimpleJoinStreamlet2  extends BaseStreamlet implements IBaseStreaml
             // Key extractor for the right stream (scores2)
             Score::getPlayerUsername,
             // Window configuration
-            WindowConfig.TumblingCountWindow(5),
+            WindowConfig.TumblingCountWindow(20),
             // Join Type
             JoinType.INNER,
             // Join function (sum scores)

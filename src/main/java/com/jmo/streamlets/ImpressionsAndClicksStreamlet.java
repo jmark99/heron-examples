@@ -94,7 +94,6 @@ public class ImpressionsAndClicksStreamlet extends BaseStreamlet implements IBas
       this.adId = StreamletUtils.randomFromList(ADS);
       this.userId = StreamletUtils.randomFromList(USERS);
       this.clickId = UUID.randomUUID().toString();
-      LOG.info(String.format("Instantiating click: %s", this));
       if (throttle) {
         StreamletUtils.sleep(nsDelay, nsDelay);
       }
