@@ -28,14 +28,12 @@ To run these Streamlet topologies, the following steps can be followed:
 * The _hUpdateLocalRepo_ script in the scripts directory should perform the following steps or you can perform them manually if preferred.
 	* This will rebuild the heron source and install the necessary jar files to your local maven repo using the settings in the script. Update the scripts to change any necessary paths or names.
 
-`
-	bazel build --config=ubuntu heron/...
-	bazel build --config=ubuntu scripts/packages:binpkgs
-	bazel-bin/scripts/packages/heron-install.sh --user
-	mvn install:install -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
-	mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
-	mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
-`
+	* bazel build --config=ubuntu heron/...
+	* bazel build --config=ubuntu scripts/packages:binpkgs
+	* bazel-bin/scripts/packages/heron-install.sh --user
+	* mvn install:install -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+	* mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+	* mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
 
 Once complete:
 
