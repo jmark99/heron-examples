@@ -18,6 +18,7 @@ Note that this is still a work in progress. Suggestions and/or corrections are w
 To run these Streamlet topologies, the following steps can be followed:
 
 * Clone or download both repos:
+
 ** [https://github.com/jmark99/heron-examples (master branch)](https://github.com/jmark99/heron-examples))
 ** [https://github.com/jmark99/incubator-heron (streamlet-acks branch)](https://github.com/jmark99/incubator-heron/tree/streamlet-acks)
 
