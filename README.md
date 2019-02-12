@@ -6,8 +6,8 @@ These sources include:
 * The Streamlet examples within the official Heron [Github repository](https://github.com/apache/incubator-heron/tree/master/examples/src/java/org/apache/heron/examples/streamlet)
 * The [Streamlio wordcount example](https://github.com/streamlio/heron-java-streamlet-api-example)
 * The snippits of code within the Heron online documentation:
-** [The Heron Streamlet API for Java](https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/)
-** [The Heron Streamlet API](https://apache.github.io/incubator-heron/docs/concepts/streamlet-api/)
+	* [The Heron Streamlet API for Java](https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/)
+	* [The Heron Streamlet API](https://apache.github.io/incubator-heron/docs/concepts/streamlet-api/)
 
 These were created during my work to implement acking for Streamlet ATLEAST_ONCE topologies.
 
@@ -19,7 +19,7 @@ To run these Streamlet topologies, the following steps can be followed:
 
 * Clone or download both repos:
 
-	* [https://github.com/jmark99/heron-examples (master branch)](https://github.com/jmark99/heron-examples))
+	* [https://github.com/jmark99/heron-examples (master branch)](https://github.com/jmark99/heron-examples)
 	* [https://github.com/jmark99/incubator-heron (streamlet-acks branch)](https://github.com/jmark99/incubator-heron/tree/streamlet-acks)
 
 * cd into incubator-heron directory
@@ -28,12 +28,14 @@ To run these Streamlet topologies, the following steps can be followed:
 * The _hUpdateLocalRepo_ script in the scripts directory should perform the following steps or you can perform them manually if preferred.
 	* This will rebuild the heron source and install the necessary jar files to your local maven repo using the settings in the script. Update the scripts to change any necessary paths or names.
 
-	* bazel build --config=ubuntu heron/...
-	* bazel build --config=ubuntu scripts/packages:binpkgs
-	* bazel-bin/scripts/packages/heron-install.sh --user
-	* mvn install:install -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
-	* mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
-	* mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+`
+	bazel build --config=ubuntu heron/...
+	bazel build --config=ubuntu scripts/packages:binpkgs
+	bazel-bin/scripts/packages/heron-install.sh --user
+	mvn install:install -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+	mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+	mvn install:install-file -Dfile=~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar -DgroupId=local.heron -DartifactId=heron-api -Dversion=0.20.0 -Dpackaging=jar
+`
 
 Once complete:
 
