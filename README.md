@@ -51,5 +51,3 @@ Allow to run as long as you like.
 * `heron deactivate local <TOPOLOGY_NAME>`
 * `heron kill local <TOPOLOGY_NAME>`
 
-If you prefer python, there are a couple of python 3 programs in the _scripts_ directory to help run all of the examples and then parse and create paired output for emits/re-emits/acks. Note that several paths will have to be updated to match your environment.
-
