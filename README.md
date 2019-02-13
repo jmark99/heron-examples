@@ -25,8 +25,6 @@ To run these Streamlet topologies, the following steps can be followed:
 * cd into `incubator-heron` directory
 * Build and install heron locally and add necessary jars to local maven repository. Note, I use Ubuntu.
 
-* The _hUpdateLocalRepo_ script in the scripts directory should perform the following steps or you can perform them manually if preferred. This will rebuild the heron source and install the necessary jar files to your local maven repo using the settings in the script. Update the scripts to change any necessary paths or names.
-
 	* `bazel build --config=ubuntu heron/...`
 	* `bazel build --config=ubuntu scripts/packages:binpkgs`
 	* `bazel-bin/scripts/packages/heron-install.sh --user`
