@@ -1,9 +1,11 @@
 #!/home/mark/bin2/anaconda3/bin/python
 
+# Quick and dirty script to run a collection of Heron Streamlets.
+# Update the EXAMPLES_DIR path to match your examples location.
+
 import begin
 import subprocess
 import time
-import os
 from pathlib import Path
 
 DEFAULT_STREAMLETS = ["ComplexSourceStreamlet",
@@ -35,13 +37,12 @@ DEFAULT_STREAMLETS = ["ComplexSourceStreamlet",
                       "FilesystemSinkStreamlet"
                       ]
 
-HOME_DIR = str(Path.home())
-USER = os.getlogin()
-BASEDIR = HOME_DIR + "/"
-
-RUN_SCRIPT = BASEDIR + "bin/scripts/hRunMyHeronExamples"
-TOPO_DIR = BASEDIR + ".herondata/topologies/local/" + USER + "/"
-HERON = BASEDIR + "bin/heron"
+BASEDIR = str(Path.home())
+PACKAGE = "com.jmo.streamlets"
+FAT_JAR = "heron-examples-1.0-SNAPSHOT-jar-with-dependencies.jar"
+EXAMPLES_DIR = BASEDIR + "/heron/heron-examples"
+JAR_PATH = EXAMPLES_DIR + '/target/' + FAT_JAR
+HERON = BASEDIR + "/bin/heron"
 
 
 def pause(seconds):
@@ -60,7 +61,7 @@ def run(*streamlets: "Space separated list of streamlets to execute. "
         streamlet_list = streamlets
 
     for streamlet in streamlet_list:
-        class_name = "com.jmo.streamlets." + streamlet
+        class_name = PACKAGE + '.' + streamlet
         topology_name = streamlet
 
         print("=====================================================")
@@ -69,7 +70,7 @@ def run(*streamlets: "Space separated list of streamlets to execute. "
         subprocess.run([HERON,
                         "submit",
                         "local",
-                        BASEDIR + "heron/heron-examples/target/heron-examples-1.0-SNAPSHOT-jar-with-dependencies.jar",
+                        JAR_PATH,
                         class_name,
                         topology_name,
                         "--deploy-deactivated"])
@@ -87,4 +88,4 @@ def run(*streamlets: "Space separated list of streamlets to execute. "
         subprocess.run([HERON, "kill",  "local",  topology_name])
         pause(5)
 
-        print("\n\n")
+        print("\n")

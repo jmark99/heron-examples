@@ -1,5 +1,12 @@
 #!/home/mark/bin2/anaconda3/bin/python
 
+# this is a quick and dirty script to parse Heron log-files looking
+# for acks/re-emits/emits. It parses a list of streamlets, pulling
+# out any log line containing an emit/ack/re-emit and then attempts
+# to pair up the acks and re-emits with the initial emit to verify
+# that messages were property sent and acknowledge. Not optimized
+# at all.
+
 import begin
 import subprocess
 import os
@@ -35,19 +42,16 @@ DEFAULT_STREAMLETS = ["ComplexSourceStreamlet",
                       "FilesystemSinkStreamlet"
                       ]
 
-HOME_DIR = str(Path.home())
+BASEDIR = str(Path.home())
 USER = os.getlogin()
-BASEDIR = HOME_DIR + "/"
-
-TOPO_DIR = BASEDIR + ".herondata/topologies/local/" + USER + "/"
-HERON = BASEDIR + "bin/heron"
+TOPO_DIR = BASEDIR + "/.herondata/topologies/local/" + USER + "/"
 
 
-def sort_by_msg_id(input, output):
+def sort_by_msg_id(input_file, output_file):
     emits = []
     acks = []
     fails = []
-    with open(input) as infile:
+    with open(input_file) as infile:
         for line in infile:
             if "Emitting:" in line:
                 emits.append(line.rstrip())
@@ -55,10 +59,10 @@ def sort_by_msg_id(input, output):
                 acks.append(line.rstrip())
             elif "Re-emit:" in line:
                 fails.append(line.rstrip())
-    pairIds(acks, emits, fails, output)
+    pair_ids(acks, emits, fails, output_file)
 
 
-def pairIds(acks, emits, fails, output):
+def pair_ids(acks, emits, fails, output):
     emit_count = 0
     failure_count = 0
     ack_count = 0
@@ -70,8 +74,8 @@ def pairIds(acks, emits, fails, output):
             # extract msgId from emitted line
             tokens = line.split(' ')
             msg_id = (tokens[-1]).rstrip(']')
-            failure_count += parseFailures(fails, msg_id, outfile)
-            ack_count += parseAcks(acks, msg_id, outfile)
+            failure_count += parse_failures(fails, msg_id, outfile)
+            ack_count += parse_acks(acks, msg_id, outfile)
     print("Number of Emitted tuples:    {0}".format(emit_count))
     print("Number of Re-emitted tuples: {0}".format(failure_count))
     print("Number of Acks:              {0}".format(ack_count))
@@ -79,8 +83,7 @@ def pairIds(acks, emits, fails, output):
         print("WARNING: Emitted tuples does not equal acknowledged tuples!")
 
 
-
-def parseAcks(acks, idval, outfile):
+def parse_acks(acks, idval, outfile):
     ack_count = 0
     # parse ack list looking for match. If found,
     # output and remove from acks list.
@@ -96,7 +99,7 @@ def parseAcks(acks, idval, outfile):
     return ack_count
 
 
-def parseFailures(fails, idval, outfile):
+def parse_failures(fails, idval, outfile):
     failure_count = 0
     # parse all fails looking for matching ID. If
     # found, output the re-emitted line and remove from
@@ -115,7 +118,7 @@ def execute(cmd):
     return result.stdout.decode('utf-8')
 
 
-def deleteExistingOutput(output_dir, streamlet):
+def delete_existing_output(output_dir, streamlet):
     parsed_ptrn = output_dir + "/" + streamlet + ".parsed*"
     paired_ptrn = output_dir + "/" + streamlet + ".paired*"
     parsed_files = glob.glob(parsed_ptrn)
@@ -126,7 +129,7 @@ def deleteExistingOutput(output_dir, streamlet):
         execute('rm ' + file)
 
 
-def createParsedOutput(file, file_cnt, output_dir, streamlet):
+def create_parsed_output(file, file_cnt, output_dir, streamlet):
     parsed_output = output_dir + "/" + streamlet + ".parsed." + str(file_cnt)
     file_cnt += 1
     cmd = 'cat ' + file + ' | grep "Emitting:\|Re-emit:\|Acked:" >> ' + parsed_output
@@ -134,7 +137,7 @@ def createParsedOutput(file, file_cnt, output_dir, streamlet):
     return parsed_output, file_cnt
 
 
-def assignStreamletsToList(streamlets):
+def assign_streamlets_to_list(streamlets):
     if len(streamlets) == 0:
         streamlet_list = DEFAULT_STREAMLETS
     else:
@@ -147,11 +150,11 @@ def run(*streamlets: "Space separated list of streamlets to check. "
                      "If not provided use default streamlet list.",
         output_dir: 'default directory containing created output data' = '/tmp'):
 
-    streamlet_list = assignStreamletsToList(streamlets)
+    streamlet_list = assign_streamlets_to_list(streamlets)
 
     for streamlet in streamlet_list:
         # remove any existing output from previous runs
-        deleteExistingOutput(output_dir, streamlet)
+        delete_existing_output(output_dir, streamlet)
 
         print("========================================================")
         print(">>> Checking counts for {0}".format(streamlet))
@@ -165,7 +168,7 @@ def run(*streamlets: "Space separated list of streamlets to check. "
             if int(matches) == 0:
                 continue
             print(">>> {0}".format(file.split('/')[-1]))
-            parsed_output, file_cnt = createParsedOutput(file, file_cnt, output_dir, streamlet)
+            parsed_output, file_cnt = create_parsed_output(file, file_cnt, output_dir, streamlet)
             # examine parsed output collecting counts and matching emits/acks
             paired_output = output_dir + "/" + streamlet + ".paired." + str(file_cnt-1)
             sort_by_msg_id(parsed_output, paired_output)
