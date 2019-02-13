@@ -37,7 +37,7 @@ To run these Streamlet topologies, the following steps can be followed:
 Once complete:
 
 * cd into the directory containing the heron-examples
-* `mvn clean assembly:assembly (Note the POM needs to be cleaned up, but I haven't bothered to do so yet.)`
+* `mvn clean assembly:assembly` (Note the POM needs to be cleaned up, but I haven't bothered to do so yet.)
 
 Note that you can set various parameters for the examples by modifying the config.properties in the conf directory of the heron-examples project.
 

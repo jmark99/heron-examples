@@ -39,11 +39,8 @@ HOME_DIR = str(Path.home())
 USER = os.getlogin()
 BASEDIR = HOME_DIR + "/"
 
-RUN_SCRIPT = BASEDIR + "bin/scripts/hRunMyHeronExamples"
 TOPO_DIR = BASEDIR + ".herondata/topologies/local/" + USER + "/"
 HERON = BASEDIR + "bin/heron"
-
-PAIR_IDS = BASEDIR + "/bin/pairHeronIds.py"
 
 
 def sort_by_msg_id(input, output):
@@ -134,7 +131,7 @@ def createParsedOutput(file, file_cnt, output_dir, streamlet):
     file_cnt += 1
     cmd = 'cat ' + file + ' | grep "Emitting:\|Re-emit:\|Acked:" >> ' + parsed_output
     execute(cmd)
-    return parsed_output
+    return parsed_output, file_cnt
 
 
 def assignStreamletsToList(streamlets):
@@ -168,9 +165,9 @@ def run(*streamlets: "Space separated list of streamlets to check. "
             if int(matches) == 0:
                 continue
             print(">>> {0}".format(file.split('/')[-1]))
-            parsed_output = createParsedOutput(file, file_cnt, output_dir, streamlet)
+            parsed_output, file_cnt = createParsedOutput(file, file_cnt, output_dir, streamlet)
             # examine parsed output collecting counts and matching emits/acks
-            paired_output = output_dir + "/" + streamlet + ".paired." + str(file_cnt)
+            paired_output = output_dir + "/" + streamlet + ".paired." + str(file_cnt-1)
             sort_by_msg_id(parsed_output, paired_output)
             print("\n")
         print("\n")
