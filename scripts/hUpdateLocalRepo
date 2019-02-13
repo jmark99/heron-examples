@@ -1,8 +1,11 @@
 #!/bin/sh +x
 
-cd $HOME/heron/incubator-heron
+# update to your Heron install directory
+HERON_DIR=$HOME/heron/incubator-heron
 
-echo "Compiling heron...."
+cd ${HERON_DIR}
+
+echo ">>> Compiling heron...."
 bazel build --config=ubuntu heron/...
 if [ $? -ne 0 ]
 then
@@ -10,15 +13,15 @@ then
    exit 1
 fi
 
-echo "Building binpkgs...."
+echo ">>> Building binpkgs...."
 bazel build --config=ubuntu scripts/packages:binpkgs
 if [ $? -ne 0 ]
 then
-    echo "Faile to build binpkgs"
+    echo "Failed to build binpkgs"
     exit 2
 fi
 
-echo "Install heron locally...."
+echo ">>> Install heron locally...."
 bazel-bin/scripts/packages/heron-install.sh --user
 if [ $? -ne 0 ]
 then
@@ -26,25 +29,45 @@ then
     exit 2
 fi
 
-mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0
+echo ">>> build bazel-simulator"
+bazel build heron/simulator/src/java:all
+if [ $? ne 0 ]
+then
+    echo "Failed to create simulator jar"
+    exit 2
+fi
+
+echo ">>> rm api-shaded.jar from local maven repo"
+rm -rf ~/.m2/repository/local/heron/heron-api
+
+echo ">>> install api-shaded into maven"
+mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0
 if [ $? -ne 0 ]
 then
     echo "Failed to install heron-api jar locally"
     exit 2
 fi
 
+echo ">>> rm simulator-shaded.jar from local maven repo"
+rm -rf ~/.m2/repository/local/heron/heron-simulator
 
-mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/simulator/src/java/simulator-shaded.jar local.heron heron-simulator 0.20.0
+echo ">>> install simulator-shaded.jar"
+mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/simulator/src/java/simulator-shaded.jar local.heron heron-simulator 0.20.0
 if [ $? -ne 0 ]
 then
     echo "Failed to install heron-simulator locally"
     exit 2
 fi
 
-mvnInstallLocalToRepo ~/heron/incubator-heron/bazel-bin/heron/api/src/java/api-unshaded.jar local.heron heron-api-unshaded 0.20.0
+echo ">>> rm api-unshaded.jar"
+rm -rf ~/.m2/repository/local/heron/heron-api-unshaded
+
+echo ">>> install heron-api-unshaded.jar"
+mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/api/src/java/api-unshaded.jar local.heron heron-api-unshaded 0.20.0
 if [ $? -ne 0 ]
 then
     echo "Failed to install heron-api-unshaded jar locally"
     exit 2
 fi
+
 
