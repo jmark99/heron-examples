@@ -7,6 +7,7 @@ import begin
 import subprocess
 import time
 from pathlib import Path
+import random
 
 DEFAULT_STREAMLETS = ["ComplexSourceStreamlet",
                       "FormattedOutputStreamlet",
@@ -50,6 +51,11 @@ def pause(seconds):
     time.sleep(seconds)
 
 
+def random_pause(lo, hi):
+    seconds = random.randint(lo, hi)
+    print(">>> Sleep {0} seconds...".format(seconds))
+    time.sleep(seconds)
+
 @begin.start
 def run(*streamlets: "Space separated list of streamlets to execute. "
                      "If not provided use default streamlet list.",
@@ -74,7 +80,7 @@ def run(*streamlets: "Space separated list of streamlets to execute. "
                         class_name,
                         topology_name,
                         "--deploy-deactivated"])
-        pause(15)
+        random_pause(15, 30)
 
         print("Activate {0}...".format(topology_name))
         subprocess.run([HERON, "activate",  "local",  topology_name])
@@ -82,10 +88,10 @@ def run(*streamlets: "Space separated list of streamlets to execute. "
 
         print("Deactivate {0}...".format(topology_name))
         subprocess.run([HERON, "deactivate",  "local",  topology_name])
-        pause(5)
+        random_pause(5, 10)
 
         print("Kill {0}...".format(topology_name))
         subprocess.run([HERON, "kill",  "local",  topology_name])
-        pause(5)
+        random_pause(5, 10)
 
         print("\n")
