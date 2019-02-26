@@ -6,7 +6,6 @@ import org.apache.heron.streamlet.Config;
 import org.apache.heron.streamlet.Streamlet;
 
 import java.util.Properties;
-import java.util.logging.Level;
 
 /**
  * Map Operations create a new streamlet by applying the supplied mapping function to each element
