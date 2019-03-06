@@ -8,6 +8,9 @@ import subprocess
 import time
 from pathlib import Path
 import random
+import os
+from pathlib import Path
+import shutil
 
 DEFAULT_STREAMLETS = ["ComplexSourceStreamlet",
                       "FormattedOutputStreamlet",
@@ -44,6 +47,8 @@ FAT_JAR = "heron-examples-1.0-SNAPSHOT-jar-with-dependencies.jar"
 EXAMPLES_DIR = BASEDIR + "/heron/heron-examples"
 JAR_PATH = EXAMPLES_DIR + '/target/' + FAT_JAR
 HERON = BASEDIR + "/bin/heron"
+USER = os.getlogin()
+TOPO_DIR = BASEDIR + "/.herondata/topologies/local/" + USER + "/"
 
 
 def pause(seconds):
@@ -56,10 +61,17 @@ def random_pause(lo, hi):
     print(">>> Sleep {0} seconds...".format(seconds))
     time.sleep(seconds)
 
+def clearTopologyDir():
+   topo_dir = Path(TOPO_DIR)
+   if topo_dir.is_dir():
+       shutil.rmtree(TOPO_DIR) 
+
 @begin.start
 def run(*streamlets: "Space separated list of streamlets to execute. "
                      "If not provided use default streamlet list.",
         runtime: "number of seconds to run streamlet" = 90):
+
+    clearTopologyDir()
 
     if len(streamlets) == 0:
         streamlet_list = DEFAULT_STREAMLETS

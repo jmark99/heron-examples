@@ -45,7 +45,7 @@ public class SmartwatchStreamlet extends BaseStreamlet implements IBaseStreamlet
     private int feetRun;
 
     SmartWatchReading() {
-      StreamletUtils.sleep(1000);
+      StreamletUtils.sleep(250);
       this.joggerId = StreamletUtils.randomFromList(JOGGERS);
       this.feetRun = ThreadLocalRandom.current().nextInt(200, 400);
     }
