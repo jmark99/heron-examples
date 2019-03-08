@@ -70,4 +70,6 @@ then
     exit 2
 fi
 
-
+echo ">>> re-build heron-example"
+cd ${HOME}/heron/heron-examples
+mvn clean assembly:assembly
