@@ -9,7 +9,7 @@ These sources include:
 	* [The Heron Streamlet API for Java](https://apache.github.io/incubator-heron/docs/developers/java/streamlet-api/)
 	* [The Heron Streamlet API](https://apache.github.io/incubator-heron/docs/concepts/streamlet-api/)
 
-These were created during my work to implement acking for Streamlet ATLEAST_ONCE topologies.
+These were created during work to implement acking for Streamlet ATLEAST_ONCE topologies.
 
 They are meant to be run against a modified version of the 0.20.x line of Heron. This modified version is the [streamlet-acks](https://github.com/jmark99/incubator-heron/tree/streamlet-acks) branch of my Heron fork and can be cloned or downloaded at this [link](https://github.com/jmark99/incubator-heron/tree/streamlet-acks).
 
@@ -20,7 +20,7 @@ To run these Streamlet topologies, the following steps can be followed:
 * Clone or download both repos:
 
 	* [https://github.com/jmark99/heron-examples (master branch)](https://github.com/jmark99/heron-examples)
-	* [https://github.com/jmark99/incubator-heron (streamlet-acks branch)](https://github.com/jmark99/incubator-heron/tree/streamlet-acks)
+	* [https://github.com/jmark99/incubator-heron (streamlet-acking branch)](https://github.com/jmark99/incubator-heron/tree/streamlet-acking)
 
 * cd into `incubator-heron` directory
 * Build and install heron locally and add necessary jars to local maven repository. Note, I use Ubuntu.
