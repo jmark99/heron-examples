@@ -1,0 +1,40 @@
+#!/bin/sh +x
+
+# update to your Heron install directory
+HERON_DIR=$HOME/heron/incubator-heron
+
+cd ${HERON_DIR}
+
+echo ">>> Compiling heron...."
+echo "--> bazel build --config=ubuntu heron/..."
+
+echo ">>> Building binpkgs...."
+echo "--> bazel build --config=ubuntu scripts/packages:binpkgs"
+
+echo ">>> Install heron locally...."
+echo "--> bazel-bin/scripts/packages/heron-install.sh --user"
+
+echo ">>> build bazel-simulator"
+echo "--> bazel build heron/simulator/src/java:all"
+
+echo ">>> rm api-shaded.jar from local maven repo"
+echo "--> rm -rf ~/.m2/repository/local/heron/heron-api"
+
+echo ">>> install api-shaded into maven"
+echo "--> mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/api/src/java/api-shaded.jar local.heron heron-api 0.20.0"
+
+echo ">>> rm simulator-shaded.jar from local maven repo"
+echo "--> rm -rf ~/.m2/repository/local/heron/heron-simulator"
+
+echo ">>> install simulator-shaded.jar"
+echo "--> mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/simulator/src/java/simulator-shaded.jar local.heron heron-simulator 0.20.0"
+
+echo ">>> rm api-unshaded.jar"
+echo "--> rm -rf ~/.m2/repository/local/heron/heron-api-unshaded"
+
+echo ">>> install heron-api-unshaded.jar"
+echo "--> mvnInstallLocalToRepo ${HERON_DIR}/bazel-bin/heron/api/src/java/api-unshaded.jar local.heron heron-api-unshaded 0.20.0"
+
+echo ">>> re-build heron-example"
+echo "--> cd ${HOME}/heron/heron-examples"
+echo "--> mvn clean assembly:assembly"

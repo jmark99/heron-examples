@@ -53,11 +53,11 @@ def sort_by_msg_id(input_file, output_file):
     fails = []
     with open(input_file) as infile:
         for line in infile:
-            if "Emitting:" in line:
+            if "emitted:" in line:
                 emits.append(line.rstrip())
-            elif "Acked:" in line:
+            elif "acked:" in line:
                 acks.append(line.rstrip())
-            elif "Re-emit:" in line:
+            elif "re-emit:" in line:
                 fails.append(line.rstrip())
     pair_ids(acks, emits, fails, output_file)
 
@@ -132,7 +132,7 @@ def delete_existing_output(output_dir, streamlet):
 def create_parsed_output(file, file_cnt, output_dir, streamlet):
     parsed_output = output_dir + "/" + streamlet + ".parsed." + str(file_cnt)
     file_cnt += 1
-    cmd = 'cat ' + file + ' | grep "Emitting:\|Re-emit:\|Acked:" >> ' + parsed_output
+    cmd = 'cat ' + file + ' | grep "emitted:\|re-emit:\|acked:" >> ' + parsed_output
     execute(cmd)
     return parsed_output, file_cnt
 
@@ -164,7 +164,7 @@ def run(*streamlets: "Space separated list of streamlets to check. "
         file_cnt = 0
         for file in container_files:
             # skip if file does not contain emits
-            matches = execute('grep -c "Emitting:" ' + file)
+            matches = execute('grep -c "emitted:" ' + file)
             if int(matches) == 0:
                 continue
             print(">>> {0}".format(file.split('/')[-1]))
